@@ -54,6 +54,7 @@ async function Customers({ searchParams }: Pick<PageProps<"/admin/clientes">, "s
   const statusOf = (r: (typeof rows)[number]) =>
     !r.sub || r.sub.status === "incompleta" || r.sub.status === "cancelada" ? "sin" : r.sub.status;
   const visible = filter === "todos" ? rows : rows.filter((r) => statusOf(r) === filter);
+  const now = new Date();
 
   return (
     <>
@@ -91,6 +92,10 @@ async function Customers({ searchParams }: Pick<PageProps<"/admin/clientes">, "s
                   {sub && status !== "sin" && (
                     <p className="text-sm">
                       {planDescription(sub)}
+                      {sub.status === "activa" &&
+                        sub.trial_ends_at &&
+                        new Date(sub.trial_ends_at) > now &&
+                        ` · prueba gratis hasta el ${formatLongDate(sub.trial_ends_at)} (o su 2.º pedido)`}
                       {sub.cancel_at_period_end && " · se da de baja"}
                     </p>
                   )}

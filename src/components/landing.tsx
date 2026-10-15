@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Logo } from "@/components/logo";
 import { Badge, ButtonLink, Card } from "@/components/ui";
-import { FREQUENCY_LABELS, PLAN_ORDER, type DeliveryFrequency } from "@/lib/domain/subscription";
-import { DEFAULT_PRICES, planPriceLabel, type PlanPrices } from "@/lib/plans";
+import { FREQUENCY_LABELS, PLAN_ORDER, hasMonthlyFee, type DeliveryFrequency } from "@/lib/domain/subscription";
+import { DEFAULT_PRICES, planPriceLabel, TRIAL_COPY, type PlanPrices } from "@/lib/plans";
 import { getCurrentProfile } from "@/lib/auth";
 import { PUBLIC_FAQS } from "@/lib/faqs";
 import { createClient } from "@/lib/supabase/server";
@@ -58,15 +58,23 @@ export function Landing() {
 
       <main>
         <section className="mx-auto max-w-5xl px-4 pb-12 pt-8 sm:pt-16">
-          <p className="mb-3 inline-flex rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent">
-            Piloto en Alzira
-          </p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            <p className="inline-flex rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent">
+              Piloto en Alzira
+            </p>
+            <p className="inline-flex rounded-full bg-primary px-3 py-1 text-sm font-bold text-primary-ink">
+              🎁 {TRIAL_COPY.badge}
+            </p>
+          </div>
           <h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
             La compra del comercio de Alzira, en tu puerta.
           </h1>
           <p className="mt-4 max-w-xl text-lg text-muted">
             Carne, pescado, fruta y verdura de las tiendas del pueblo, sin ir de tienda en tienda. Monta tu cesta una
             vez, confirma cada pedido con un toque y te lo llevamos a casa.
+          </p>
+          <p className="mt-3 max-w-xl font-semibold text-primary">
+            {TRIAL_COPY.title}: {TRIAL_COPY.rule.charAt(0).toLowerCase() + TRIAL_COPY.rule.slice(1)}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="/" className="sm:px-8">
@@ -99,7 +107,10 @@ export function Landing() {
 
         <section id="planes" className="mx-auto max-w-5xl px-4 py-12">
           <h2 className="text-2xl font-bold">Planes</h2>
-          <p className="mt-1 text-muted">Con IVA incluido. Sin permanencia: cambias de plan cuando quieras.</p>
+          <p className="mt-1 text-muted">
+            Con IVA incluido. Sin permanencia: cambias de plan cuando quieras. Los planes con cuota empiezan con 2 semanas
+            gratis (o tus 2 primeros pedidos, lo que llegue antes).
+          </p>
           <Suspense fallback={<PlanCards prices={DEFAULT_PRICES} />}>
             <Pricing />
           </Suspense>
@@ -188,6 +199,11 @@ function PlanCards({ prices }: { prices: PlanPrices }) {
               {plan === "semanal" && <Badge tone="success">El más elegido</Badge>}
             </div>
             <p className="mt-2 text-2xl font-bold">{planPriceLabel(prices, plan)}</p>
+            {hasMonthlyFee(plan) && (
+              <p className="mt-1 inline-flex rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary">
+                🎁 {TRIAL_COPY.badge}
+              </p>
+            )}
             <p className="mt-1 text-sm text-muted">{PLAN_TEXT[plan]}</p>
           </Card>
         </li>

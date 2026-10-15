@@ -12,8 +12,8 @@ export default function SignUpPage({ searchParams }: PageProps<"/registro">) {
     <>
       <h1 className="text-2xl font-bold">Crea tu cuenta</h1>
       <p className="mt-1 text-muted">
-        Con tu cuenta confirmas tus pedidos; el plan lo eliges al confirmar el primero. Solo repartimos en Alzira (CP
-        46600).
+        Con tu cuenta confirmas tus pedidos; el plan lo eliges al confirmar el primero y empiezas con{" "}
+        <strong className="text-text">2 semanas gratis</strong>. Solo repartimos en Alzira (CP 46600).
       </p>
       <ActionForm action={signUp} className="mt-6 space-y-4">
         <Suspense>

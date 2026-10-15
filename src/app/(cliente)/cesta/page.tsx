@@ -160,13 +160,17 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
               {ctx.isGuest ? (
                 <ConfirmWithAccount
                   href={`/registro?volver=${encodeURIComponent("/bienvenida?confirmar=1")}`}
-                  text="Para confirmar, crea tu cuenta y elige tu plan. Tu cesta no se pierde."
+                  text="Para confirmar, crea tu cuenta y elige tu plan: empiezas con 2 semanas gratis. Tu cesta no se pierde."
                   login={`/entrar?volver=${encodeURIComponent("/cesta?confirmar=1")}`}
                 />
               ) : !hasPlan ? (
                 <ConfirmWithAccount
                   href="/bienvenida?confirmar=1"
-                  text="Para confirmarlo, elige tu plan. Tu cesta no se pierde."
+                  text={
+                    ctx.trialOffer
+                      ? "Para confirmarlo, elige tu plan: empiezas con 2 semanas gratis. Tu cesta no se pierde."
+                      : "Para confirmarlo, elige tu plan. Tu cesta no se pierde."
+                  }
                 />
               ) : ctx.toConfirm?.auto && ctx.autoBasket ? (
                 <AutoOrder

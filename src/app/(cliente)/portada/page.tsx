@@ -7,6 +7,7 @@ import { CATEGORY_META } from "@/components/store/catalog-meta";
 import { DeliveryBar } from "@/components/store/delivery-bar";
 import { ProductGrid } from "@/components/store/product-grid";
 import { SeasonHero, StoreSection } from "@/components/store/sections";
+import { TrialBanner } from "@/components/store/trial-banner";
 import { getClientContext, getUsualProductIds } from "@/lib/client-context";
 import { TIME_ZONE } from "@/lib/domain/dates";
 import { seasonalGroups, seasonHighlight } from "@/lib/domain/season";
@@ -51,6 +52,7 @@ async function StoreHome() {
   return (
     <div className="mx-auto max-w-5xl">
       <DeliveryBar />
+      {ctx.trialOffer && <TrialBanner isGuest={ctx.isGuest} />}
 
       <StoreSection title="Productos de temporada" subtitle="Lo mejor de cada época en las tiendas de Alzira">
         <SeasonHero highlight={highlight} href={`/categorias/${highlight.category}`} />

@@ -20,16 +20,22 @@ export async function DeliveryBar() {
   if (ctx.isGuest) {
     content = (
       <>
-        Te llevamos a casa la compra de las tiendas de Alzira (CP 46600), los martes y viernes. Llena tu cesta sin
-        compromiso: la cuenta y el plan se piden al confirmar el pedido.{" "}
+        <strong>🎁 Pruébalo 2 semanas gratis.</strong> Te llevamos a casa la compra de las tiendas de Alzira (CP 46600),
+        los martes y viernes. Llena tu cesta sin compromiso: la cuenta y el plan se piden al confirmar el pedido.{" "}
         <BarLink href="/como-funciona">Cómo funciona y precios</BarLink>
       </>
     );
   } else if (!sub || sub.status === "incompleta" || sub.status === "cancelada") {
     content = (
       <>
-        Elige tu plan para recibir tu cesta{where}.{" "}
-        <BarLink href="/bienvenida">Elegir plan</BarLink>
+        Elige tu plan para recibir tu cesta{where}
+        {ctx.trialOffer && (
+          <>
+            {" "}
+            y <strong>empieza con 2 semanas gratis</strong>
+          </>
+        )}
+        . <BarLink href="/bienvenida">Elegir plan</BarLink>
       </>
     );
   } else if (sub.status === "pausada") {

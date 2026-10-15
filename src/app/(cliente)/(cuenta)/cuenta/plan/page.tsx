@@ -12,6 +12,7 @@ import { formatDay, formatLongDate } from "@/lib/format";
 import { planDescription, planPriceLabel } from "@/lib/plans";
 import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { getTrial } from "@/lib/trial";
 import type { Settings, Subscription } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Tu plan" };
@@ -47,6 +48,7 @@ async function Account() {
   const perDelivery = sub?.frequency === "por_envio";
   const next = sub?.status === "activa" && !perDelivery ? await nextDeliveryFor(supabase, sub, new Date()) : null;
   const hasStripe = Boolean(getStripe() && sub?.stripe_customer_id);
+  const trial = sub?.status === "activa" ? await getTrial(supabase, sub) : null;
 
   return (
     <>
@@ -73,13 +75,29 @@ async function Account() {
             </p>
           )}
           {perDelivery && <p className="text-sm text-muted">Pides los repartos que quieras desde tu cesta.</p>}
-          {!perDelivery && sub.current_period_end && !sub.cancel_at_period_end && sub.status === "activa" && (
+          {trial && !sub.cancel_at_period_end && (
+            <div role="status" className="rounded-lg bg-primary-soft px-4 py-3 text-sm text-primary">
+              <p className="text-base font-bold">
+                🎁 Prueba gratis: te {trial.daysLeft === 1 ? "queda 1 día" : `quedan ${trial.daysLeft} días`} o{" "}
+                {trial.ordersLeft === 1 ? "1 pedido" : `${trial.ordersLeft} pedidos`}
+              </p>
+              <p className="mt-1">
+                No pagas la cuota hasta el {formatLongDate(trial.endsAt)} o hasta que se prepare tu 2.º pedido, lo que
+                llegue antes. Entonces se cobra la cuota ({settings ? planPriceLabel(settings, sub.frequency) : "la de tu plan"}) a
+                tu tarjeta y después cada mes. Si te das de baja antes, no pagas ninguna cuota.
+              </p>
+            </div>
+          )}
+          {!trial && !perDelivery && sub.current_period_end && !sub.cancel_at_period_end && sub.status === "activa" && (
             <p className="text-sm text-muted">Próxima cuota: {formatLongDate(sub.current_period_end)}.</p>
           )}
           {!perDelivery && sub.cancel_at_period_end && (
             <p className="text-sm font-medium text-warning">
-              Te has dado de baja: seguirás recibiendo repartos hasta el{" "}
-              {sub.current_period_end ? formatLongDate(sub.current_period_end) : "final del periodo pagado"}.
+              {trial
+                ? `Te has dado de baja: tu plan termina con tu prueba gratis (el ${formatLongDate(trial.endsAt)} o con tu 2.º pedido) y no pagas ninguna cuota.`
+                : `Te has dado de baja: seguirás recibiendo repartos hasta el ${
+                    sub.current_period_end ? formatLongDate(sub.current_period_end) : "final del periodo pagado"
+                  }.`}
             </p>
           )}
 
@@ -95,7 +113,7 @@ async function Account() {
             </form>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
-              {sub.status === "pausada" ? (
+              {trial ? null : sub.status === "pausada" ? (
                 <form action={changeSubscription.bind(null, "reanudar")}>
                   <SubmitButton className="w-full" pendingText="Reanudando…">
                     Reanudar repartos
@@ -121,8 +139,12 @@ async function Account() {
                 <form action={changeSubscription.bind(null, "cancelar")}>
                   <ConfirmButton
                     variant="danger"
-                    className="w-full"
-                    message="Seguirás recibiendo repartos hasta el final del mes que ya has pagado. ¿Darte de baja?"
+                    className={trial ? "w-full sm:col-span-2" : "w-full"}
+                    message={
+                      trial
+                        ? "Estás en la prueba gratis: tu plan terminará con ella y no pagarás ninguna cuota. ¿Darte de baja?"
+                        : "Seguirás recibiendo repartos hasta el final del mes que ya has pagado. ¿Darte de baja?"
+                    }
                   >
                     Darme de baja
                   </ConfirmButton>
@@ -142,7 +164,13 @@ async function Account() {
         <>
           <SectionTitle>Cambiar de plan o de día</SectionTitle>
           <ActionForm action={updatePlan}>
-            <PlanPicker rules={rules} prices={settings} plan={sub.frequency} weekday={sub.delivery_weekday} />
+            <PlanPicker
+              rules={rules}
+              prices={settings}
+              plan={sub.frequency}
+              weekday={sub.delivery_weekday}
+              trial={perDelivery && !sub.trial_started_at}
+            />
             <p className="text-sm text-muted">
               Si cambias entre planes con cuota, la diferencia se ajusta en tu próxima cuota.
             </p>

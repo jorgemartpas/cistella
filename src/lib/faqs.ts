@@ -8,7 +8,11 @@ export const PUBLIC_FAQS: Faq[] = [
   },
   {
     q: "¿Cuánto cuesta?",
-    a: "Depende del plan que elijas (mira «Planes»), con IVA incluido. Los productos se pagan aparte, en cada reparto y con el peso real, a la misma tarjeta.",
+    a: "Depende del plan que elijas (mira «Planes»), con IVA incluido, y los planes con cuota empiezan con 2 semanas gratis. Los productos se pagan aparte, en cada reparto y con el peso real, a la misma tarjeta.",
+  },
+  {
+    q: "¿Puedo probarlo gratis?",
+    a: "Sí. Los planes con cuota empiezan con una prueba gratis: no pagas la cuota durante 2 semanas o tus 2 primeros pedidos, lo que llegue antes. Después se cobra sola cada mes, y si te das de baja antes no pagas ninguna cuota. Los productos se pagan siempre, al entregarlos. La prueba es una por cliente (el pago por envío no la tiene).",
   },
   {
     q: "¿Qué días repartís?",

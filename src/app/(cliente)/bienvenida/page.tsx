@@ -10,9 +10,10 @@ import { syncCheckoutSession, startSubscription } from "@/lib/actions/subscripti
 import { updateProfile } from "@/lib/actions/profile";
 import { isProfileComplete, requireRole } from "@/lib/auth";
 import { getScheduleRules, nextDeliveryFor } from "@/lib/delivery";
-import { formatCutoff, formatDay } from "@/lib/format";
+import { formatCutoff, formatDay, formatLongDate } from "@/lib/format";
 import { getStripe, paymentsDemoMode } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { getTrial } from "@/lib/trial";
 import type { Settings, Subscription } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Bienvenida" };
@@ -58,6 +59,7 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
   if (isSubscribed && pago === "ok") {
     const perDelivery = sub.frequency === "por_envio";
     const next = sub.status === "activa" && !perDelivery ? await nextDeliveryFor(supabase, sub, new Date()) : null;
+    const trial = sub.status === "activa" ? await getTrial(supabase, sub) : null;
     return (
       <div className="py-6 text-center">
         <div className="text-5xl" aria-hidden>
@@ -67,6 +69,11 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
         {perDelivery && (
           <p className="mt-2 text-muted">
             Monta tu cesta y pide los repartos que quieras desde la pestaña «Mi cesta».
+          </p>
+        )}
+        {trial && (
+          <p className="mt-2 font-semibold text-primary">
+            🎁 Tu prueba gratis ha empezado: no pagas la cuota hasta el {formatLongDate(trial.endsAt)} o tu 2.º pedido.
           </p>
         )}
         {next && (
@@ -112,14 +119,19 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
   }
 
   const demo = !getStripe() && paymentsDemoMode();
+  const trial = !sub?.trial_started_at;
   return (
     <>
       <Steps current={2} />
       <h1 className="text-2xl font-bold">Elige tu plan</h1>
       <p className="mb-5 mt-1 text-muted">
-        {confirming
-          ? "Último paso para confirmar tu pedido. Lo puedes cambiar cuando quieras desde tu cuenta."
-          : "Lo puedes cambiar cuando quieras desde tu cuenta."}
+        {confirming && "Último paso para confirmar tu pedido. "}
+        {trial && (
+          <>
+            Empiezas con <strong className="text-text">2 semanas gratis</strong>.{" "}
+          </>
+        )}
+        Lo puedes cambiar cuando quieras desde tu cuenta.
       </p>
       {pago === "cancelado" && (
         <div className="mb-4">
@@ -128,11 +140,21 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
       )}
       <ActionForm action={startSubscription}>
         {confirming && <input type="hidden" name="confirmar" value="1" />}
-        {settings && <PlanPicker rules={rules} prices={settings} plan={sub?.frequency} weekday={sub?.delivery_weekday} />}
         {demo && <Notice tone="warning">Modo demo: no se cobrará nada (Stripe no está configurado).</Notice>}
-        <SubmitButton className="w-full" pendingText="Abriendo el pago…">
-          {demo ? "Activar plan (demo)" : "Continuar al pago"}
-        </SubmitButton>
+        {settings && (
+          <PlanPicker
+            rules={rules}
+            prices={settings}
+            plan={sub?.frequency}
+            weekday={sub?.delivery_weekday}
+            trial={trial}
+            submit={{
+              label: demo ? "Activar plan (demo)" : "Continuar al pago",
+              trialLabel: demo ? "Empezar mi prueba gratis (demo)" : "Empezar mi prueba gratis",
+              pendingText: demo ? "Activando…" : "Abriendo el pago…",
+            }}
+          />
+        )}
       </ActionForm>
     </>
   );

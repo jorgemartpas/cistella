@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { WEEKDAY_NAMES, type ScheduleRule } from "@/lib/domain/schedule";
-import { FREQUENCY_LABELS, PLAN_ORDER, needsWeekday, type DeliveryFrequency } from "@/lib/domain/subscription";
-import { planPriceLabel, type PlanPrices } from "@/lib/plans";
+import { FREQUENCY_LABELS, PLAN_ORDER, hasMonthlyFee, needsWeekday, type DeliveryFrequency } from "@/lib/domain/subscription";
+import { planPriceLabel, TRIAL_COPY, type PlanPrices } from "@/lib/plans";
+import { SubmitButton } from "./forms";
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -22,17 +23,24 @@ function listDays(weekdays: number[]) {
 const radioCard =
   "flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 has-[:checked]:border-primary has-[:checked]:bg-primary-soft";
 
-/** Elección de plan (con su precio) y, si el plan lo necesita, del día de reparto. */
+/**
+ * Elección de plan (con su precio) y, si el plan lo necesita, del día de reparto. Con `trial`, los
+ * planes con cuota muestran la prueba gratis; con `submit`, el botón cambia según el plan elegido.
+ */
 export function PlanPicker({
   rules,
   prices,
   plan,
   weekday,
+  trial = false,
+  submit,
 }: {
   rules: ScheduleRule[];
   prices: PlanPrices;
   plan?: DeliveryFrequency;
   weekday?: number;
+  trial?: boolean;
+  submit?: { label: string; trialLabel: string; pendingText: string };
 }) {
   const [selected, setSelected] = useState<DeliveryFrequency>(plan ?? "semanal");
   const active = rules.filter((r) => r.active);
@@ -62,8 +70,16 @@ export function PlanPicker({
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-baseline justify-between gap-x-3">
                   <span className="font-semibold">{FREQUENCY_LABELS[p]}</span>
-                  <span className="font-bold">{planPriceLabel(prices, p)}</span>
+                  <span className="font-bold">
+                    {trial && hasMonthlyFee(p) && <span className="font-medium text-muted">luego </span>}
+                    {planPriceLabel(prices, p)}
+                  </span>
                 </span>
+                {trial && hasMonthlyFee(p) && (
+                  <span className="mt-1 inline-flex rounded-full bg-primary px-2.5 py-0.5 text-xs font-bold text-primary-ink">
+                    🎁 {TRIAL_COPY.badge}
+                  </span>
+                )}
                 <span className="block text-sm text-muted">{descriptions[p]}</span>
               </span>
             </label>
@@ -95,10 +111,26 @@ export function PlanPicker({
         </fieldset>
       )}
 
+      {trial && hasMonthlyFee(selected) && (
+        <div className="rounded-lg bg-primary-soft px-4 py-3 text-sm text-primary">
+          <p className="font-bold">🎁 {TRIAL_COPY.title}</p>
+          <p className="mt-0.5">
+            {TRIAL_COPY.rule} Te pedimos la tarjeta ahora, pero no se cobra ninguna cuota hasta que termine la prueba.{" "}
+            {TRIAL_COPY.after}
+          </p>
+        </div>
+      )}
+
       <p className="text-sm text-muted">
         Precios con IVA incluido. Los productos se cobran aparte en cada reparto, con el peso real, a la misma tarjeta.
         {selected !== "por_envio" && " Sin permanencia: puedes pausar, cambiar de plan o darte de baja cuando quieras."}
       </p>
+
+      {submit && (
+        <SubmitButton className="w-full" pendingText={submit.pendingText}>
+          {trial && hasMonthlyFee(selected) ? submit.trialLabel : submit.label}
+        </SubmitButton>
+      )}
     </>
   );
 }

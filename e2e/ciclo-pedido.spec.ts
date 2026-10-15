@@ -52,7 +52,9 @@ test("ciclo completo: el visitante llena la cesta, crea la cuenta al confirmar, 
   await expect(main(page).getByRole("heading", { name: "Elige tu plan" })).toBeVisible();
   await main(page).getByRole("radio", { name: /^Cada semana/ }).check();
   await main(page).getByRole("radio", { name: /^Martes/ }).check();
-  await main(page).getByRole("button", { name: /Activar plan|Continuar al pago/ }).click();
+  // Los planes con cuota empiezan con la prueba gratis
+  await expect(main(page).getByText("Prueba Cistella 2 semanas gratis")).toBeVisible();
+  await main(page).getByRole("button", { name: /Empezar mi prueba gratis/ }).click();
 
   // Vuelve a su cesta (la que llenó sin cuenta) y el pedido queda confirmado solo
   await page.waitForURL("**/cesta?confirmar=1");
@@ -71,6 +73,10 @@ test("ciclo completo: el visitante llena la cesta, crea la cuenta al confirmar, 
   await expect(main(admin).getByText(/generados el/)).toBeVisible();
   const dayUrl = admin.url();
   const dayId = dayUrl.split("/").pop()!;
+
+  // Con el pedido preparado, la prueba gratis cuenta 1 de sus 2 pedidos
+  await page.goto("/cuenta/plan");
+  await expect(main(page).getByText(/Prueba gratis: te quedan \d+ días o 1 pedido/)).toBeVisible();
 
   // 4. La carnicería prepara su parte con el peso real
   const butcher = await login(browser, "reino@cistella.test");

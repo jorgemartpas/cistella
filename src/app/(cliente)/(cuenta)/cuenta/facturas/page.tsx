@@ -6,10 +6,11 @@ import { Badge, EmptyState, PageHeader, PageSkeleton, SectionTitle, buttonStyles
 import { openBillingPortal } from "@/lib/actions/subscription";
 import { requireRole } from "@/lib/auth";
 import { formatEuros } from "@/lib/domain/money";
-import { capitalize, formatDay } from "@/lib/format";
+import { capitalize, formatDay, formatLongDate } from "@/lib/format";
 import { PAYMENT_STATUS } from "@/lib/labels";
 import { getStripe, paymentsDemoMode } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { getTrial } from "@/lib/trial";
 import type { PaymentStatus } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Facturas" };
@@ -45,8 +46,13 @@ async function Invoices() {
       .eq("status", "entregado")
       .order("created_at", { ascending: false })
       .limit(60),
-    supabase.from("subscriptions").select("stripe_customer_id").eq("customer_id", profile.id).maybeSingle(),
+    supabase
+      .from("subscriptions")
+      .select("customer_id, status, stripe_customer_id, trial_started_at, trial_ends_at")
+      .eq("customer_id", profile.id)
+      .maybeSingle(),
   ]);
+  const trial = sub?.status === "activa" ? await getTrial(supabase, sub) : null;
   const orders = ((data ?? []) as unknown as DeliveredOrder[]).sort((a, b) =>
     b.delivery_days.date.localeCompare(a.delivery_days.date),
   );
@@ -85,6 +91,12 @@ async function Invoices() {
 
       <SectionTitle>Cuota del plan</SectionTitle>
       <div className="card-surface p-5 text-sm">
+        {trial && (
+          <p className="mb-3 font-semibold text-primary">
+            🎁 Estás en tu prueba gratis: aún no se ha cobrado ninguna cuota. La primera se cobra el{" "}
+            {formatLongDate(trial.endsAt)} o con tu 2.º pedido, lo que llegue antes.
+          </p>
+        )}
         {hasStripe ? (
           <>
             <p className="text-muted">

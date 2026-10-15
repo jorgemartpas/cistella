@@ -35,7 +35,7 @@ export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
         <p className="text-muted">
           ¿Aún no tienes cuenta?{" "}
           <Link href="/registro" className="font-semibold text-primary underline underline-offset-2">
-            Suscríbete
+            Crea tu cuenta
           </Link>
         </p>
       </div>

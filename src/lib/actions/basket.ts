@@ -1,11 +1,12 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { requireRole } from "@/lib/auth";
+import { getCurrentProfile, requireRole } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { basketLockReason } from "@/lib/basket-rules";
 import { BASKET_DAY_COOKIE } from "@/lib/client-context";
 import { toCadence } from "@/lib/delivery";
+import { setGuestBasketQuantity } from "@/lib/guest-basket";
 import { normalizeQuantity, type ProductUnit } from "@/lib/domain/money";
 import { basketSlotFor, isDueOn } from "@/lib/domain/subscription";
 import { createClient } from "@/lib/supabase/server";
@@ -13,21 +14,29 @@ import type { Subscription } from "@/lib/types";
 
 /**
  * Cambia la cantidad de un producto en la cesta (0 lo quita). `slot` es la cesta: 0 la única,
- * o el día de la semana en el plan de 2 veces por semana.
+ * o el día de la semana en el plan de 2 veces por semana. Un visitante sin cuenta también
+ * puede llenar su cesta: se guarda en una cookie y pasa a su cuenta cuando la crea o entra.
  */
 export async function setBasketQuantity(productId: string, quantity: number, slot = 0): Promise<{ error?: string }> {
-  const profile = await requireRole("cliente");
+  const profile = await getCurrentProfile();
+  if (profile && profile.role !== "cliente") return { error: "Las tiendas y el equipo no tienen cesta." };
   const supabase = await createClient();
-  const locked = await basketLockReason(supabase, profile.id, slot);
-  if (locked) return { error: locked };
+  if (profile) {
+    const locked = await basketLockReason(supabase, profile.id, slot);
+    if (locked) return { error: locked };
+  }
 
   if (quantity <= 0) {
-    await supabase
-      .from("basket_items")
-      .delete()
-      .eq("customer_id", profile.id)
-      .eq("slot", slot)
-      .eq("product_id", productId);
+    if (!profile) {
+      await setGuestBasketQuantity(productId, 0);
+    } else {
+      await supabase
+        .from("basket_items")
+        .delete()
+        .eq("customer_id", profile.id)
+        .eq("slot", slot)
+        .eq("product_id", productId);
+    }
     refresh();
     return {};
   }
@@ -38,6 +47,11 @@ export async function setBasketQuantity(productId: string, quantity: number, slo
   const rounded = normalizeQuantity(quantity, product.unit as ProductUnit);
   if (!(rounded > 0) || rounded > 50) return { error: "Esa cantidad no es válida." };
 
+  if (!profile) {
+    await setGuestBasketQuantity(productId, rounded);
+    refresh();
+    return {};
+  }
   const { error } = await supabase
     .from("basket_items")
     .upsert(

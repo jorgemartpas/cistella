@@ -1,5 +1,6 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { moveGuestBasketToAccount } from "@/lib/guest-basket";
 import { createClient } from "@/lib/supabase/server";
 
 // Destino de los enlaces de los emails de Supabase (confirmar cuenta, cambiar contraseña)
@@ -22,5 +23,7 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.redirect(new URL("/entrar?error=enlace", origin));
   }
+  const { data } = await supabase.auth.getUser();
+  if (data.user) await moveGuestBasketToAccount(supabase, data.user.id);
   return NextResponse.redirect(new URL(next, origin));
 }

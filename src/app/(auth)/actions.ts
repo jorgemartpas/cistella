@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { env } from "@/lib/env";
+import { moveGuestBasketToAccount } from "@/lib/guest-basket";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
 
@@ -22,13 +23,15 @@ export async function signIn(_: ActionState, formData: FormData): Promise<Action
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
     if (error.code === "email_not_confirmed") {
       return { error: "Antes de entrar, confirma tu email con el enlace que te enviamos." };
     }
     return { error: "El email o la contraseña no son correctos." };
   }
+  // Lo que hubiera metido en la cesta sin entrar pasa a su cuenta
+  await moveGuestBasketToAccount(supabase, data.user.id);
   redirect(safeNext(formData.get("volver")));
 }
 
@@ -43,13 +46,15 @@ export async function signUp(_: ActionState, formData: FormData): Promise<Action
   const parsed = signUpSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
+  // Sin destino, a la tienda: el plan se elige al confirmar el primer pedido
+  const next = safeNext(formData.get("volver"), "/");
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       data: { full_name: parsed.data.full_name, accepted_privacy: "true" },
-      emailRedirectTo: `${env.siteUrl}/auth/confirm?next=/bienvenida`,
+      emailRedirectTo: `${env.siteUrl}/auth/confirm?next=${encodeURIComponent(next)}`,
     },
   });
   if (error) {
@@ -58,10 +63,11 @@ export async function signUp(_: ActionState, formData: FormData): Promise<Action
     return { error: "No hemos podido crear la cuenta. Inténtalo de nuevo en unos minutos." };
   }
   // Si el proyecto pide confirmar el email, todavía no hay sesión
-  if (!data.session) {
+  if (!data.session || !data.user) {
     return { ok: `Te hemos enviado un email a ${parsed.data.email}. Abre el enlace para activar tu cuenta.` };
   }
-  redirect("/bienvenida");
+  await moveGuestBasketToAccount(supabase, data.user.id);
+  redirect(next);
 }
 
 export async function requestPasswordReset(_: ActionState, formData: FormData): Promise<ActionState> {

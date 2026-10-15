@@ -8,6 +8,7 @@ import { Icon, type IconName } from "../icons";
 import { cx } from "../ui";
 
 const SECTIONS = [
+  { href: "/", label: "Inicio" },
   { href: "/categorias", label: "Categorías" },
   { href: "/cestas-guardadas", label: "Cestas" },
 ];
@@ -22,7 +23,12 @@ export function StoreNavLinks({ pathname }: { pathname: string | null }) {
   return (
     <nav aria-label="Secciones de la tienda" className="hidden items-center gap-1 md:flex">
       {SECTIONS.map((s) => {
-        const active = pathname !== null && (pathname === s.href || pathname.startsWith(`${s.href}/`));
+        // La portada se sirve en "/" (el proxy la reescribe a /portada)
+        const active =
+          pathname !== null &&
+          (s.href === "/"
+            ? pathname === "/" || pathname === "/portada"
+            : pathname === s.href || pathname.startsWith(`${s.href}/`));
         return (
           <Link
             key={s.href}

@@ -14,19 +14,21 @@ export type ChargeResult = { status: "pagado" | "fallido" | "pendiente" | "sin_c
 export async function chargeOrder(service: SupabaseClient, orderId: string): Promise<ChargeResult> {
   const { data: order } = await service
     .from("orders")
-    .select("id, customer_id, payment_status, delivery_days(date), shop_orders(order_items(*))")
+    .select("id, customer_id, payment_status, delivery_fee_cents, delivery_days(date), shop_orders(order_items(*))")
     .eq("id", orderId)
     .single<{
       id: string;
       customer_id: string | null;
       payment_status: string;
+      delivery_fee_cents: number;
       delivery_days: { date: string };
       shop_orders: { order_items: OrderItem[] }[];
     }>();
   if (!order) return { status: "omitido", message: "El pedido no existe" };
 
   const items = order.shop_orders.flatMap((so) => so.order_items);
-  const amount = finalTotalCents(
+  // Productos con el peso real + gastos de envío (pago por envío)
+  const amount = order.delivery_fee_cents + finalTotalCents(
     items.map((i) => ({
       quantityOrdered: Number(i.quantity_ordered),
       quantityActual: i.quantity_actual === null ? null : Number(i.quantity_actual),

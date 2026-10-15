@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { env } from "@/lib/env";
-import { getStripe, syncStripeSubscription } from "@/lib/stripe";
+import { completeCardSetup, getStripe, syncStripeSubscription } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/server";
 
 // Stripe → Cistella: estado de las suscripciones y resultado de los cobros de pedidos.
@@ -25,6 +25,8 @@ export async function POST(request: Request) {
       const session = event.data.object;
       if (session.mode === "subscription" && typeof session.subscription === "string") {
         await syncStripeSubscription(service, await stripe.subscriptions.retrieve(session.subscription));
+      } else if (session.mode === "setup") {
+        await completeCardSetup(service, stripe, session);
       }
       break;
     }

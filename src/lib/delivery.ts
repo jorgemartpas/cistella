@@ -3,8 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays, isoWeekday, madridDate, type ISODate } from "@/lib/domain/dates";
 import { planOrdersForDay, type PlannedOrder, type ProductCategory } from "@/lib/domain/orders";
 import { nextInRotation, rotationQueue } from "@/lib/domain/rotation";
-import { upcomingDeliveryDates, type ScheduleRule } from "@/lib/domain/schedule";
-import { isDueOn, type SubscriptionCadence } from "@/lib/domain/subscription";
+import { nextOpenDate, nextOpenDateForWeekday, upcomingDeliveryDates, type ScheduleRule } from "@/lib/domain/schedule";
+import { isDueOn, needsWeekday, type DeliveryFrequency, type SubscriptionCadence } from "@/lib/domain/subscription";
 import type { DeliveryDay, DeliveryScheduleRow, GenerationReport, Shop, Subscription } from "@/lib/types";
 
 export async function getScheduleRules(supabase: SupabaseClient): Promise<ScheduleRule[]> {
@@ -35,13 +35,29 @@ export type UpcomingDelivery = {
 };
 
 /**
- * Próximo reparto que le toca a una suscripción y que aún admite cambios. Usa los días ya
- * generados (respeta los cancelados y los cierres editados) y, si aún no existen, el calendario.
+ * Primer reparto de un plan nuevo (o tras cambiarlo o reanudarlo): el siguiente abierto del día
+ * elegido, o de cualquier día si el plan no tiene día fijo. Sirve de ancla para la frecuencia.
+ */
+export function planAnchor(
+  rules: ScheduleRule[],
+  plan: DeliveryFrequency,
+  weekday: number | null,
+  now: Date,
+): { anchorDate: ISODate; weekday: number } | null {
+  const first = needsWeekday(plan) ? (weekday ? nextOpenDateForWeekday(rules, weekday, now) : null) : nextOpenDate(rules, now);
+  return first ? { anchorDate: first.date, weekday: isoWeekday(first.date) } : null;
+}
+
+/**
+ * Próximo reparto fijo que le toca a una suscripción y que aún admite cambios (opcionalmente,
+ * solo de un día de la semana). Usa los días ya generados (respeta los cancelados y los cierres
+ * editados) y, si aún no existen, el calendario. El pago por envío no tiene repartos fijos.
  */
 export async function nextDeliveryFor(
   supabase: SupabaseClient,
   sub: Pick<Subscription, "status" | "frequency" | "delivery_weekday" | "anchor_date">,
   now: Date,
+  onlyWeekday?: number,
 ): Promise<UpcomingDelivery | null> {
   const cadence = toCadence({ ...sub, status: "activa" });
   const today = madridDate(now);
@@ -52,6 +68,7 @@ export async function nextDeliveryFor(
   const byDate = new Map((days as DeliveryDay[] | null ?? []).map((d) => [d.date, d]));
   const candidates = upcomingDeliveryDates(rules, today, 7 * 9, now);
   for (const c of candidates) {
+    if (onlyWeekday && isoWeekday(c.date) !== onlyWeekday) continue;
     if (!isDueOn(cadence, c.date)) continue;
     const day = byDate.get(c.date) ?? null;
     if (day) {
@@ -69,7 +86,7 @@ export async function nextDeliveryFor(
  */
 export async function closingDayFor(
   supabase: SupabaseClient,
-  sub: Pick<Subscription, "status" | "frequency" | "delivery_weekday" | "anchor_date">,
+  sub: Pick<Subscription, "customer_id" | "status" | "frequency" | "delivery_weekday" | "anchor_date">,
   now: Date,
 ): Promise<DeliveryDay | null> {
   const { data } = await supabase
@@ -78,7 +95,45 @@ export async function closingDayFor(
     .eq("status", "abierto")
     .is("orders_generated_at", null)
     .lte("cutoff_at", now.toISOString());
-  return ((data as DeliveryDay[] | null) ?? []).find((d) => isDueOn(toCadence(sub), d.date)) ?? null;
+  const closing = (data as DeliveryDay[] | null) ?? [];
+  if (sub.frequency === "por_envio") {
+    if (closing.length === 0) return null;
+    const { data: requests } = await supabase
+      .from("delivery_requests")
+      .select("delivery_day_id")
+      .eq("customer_id", sub.customer_id)
+      .in("delivery_day_id", closing.map((d) => d.id));
+    const requested = new Set((requests ?? []).map((r) => r.delivery_day_id));
+    return closing.find((d) => requested.has(d.id)) ?? null;
+  }
+  return closing.find((d) => isDueOn(toCadence(sub), d.date)) ?? null;
+}
+
+export type RequestableDay = { day: DeliveryDay; requested: boolean };
+
+/** Pago por envío: próximos repartos abiertos y si el cliente ya los ha pedido. */
+export async function requestableDays(
+  supabase: SupabaseClient,
+  customerId: string,
+  now: Date,
+  limit = 6,
+): Promise<RequestableDay[]> {
+  const { data: days } = await supabase
+    .from("delivery_days")
+    .select("*")
+    .eq("status", "abierto")
+    .gt("cutoff_at", now.toISOString())
+    .order("date")
+    .limit(limit);
+  const open = (days as DeliveryDay[] | null) ?? [];
+  if (open.length === 0) return [];
+  const { data: requests } = await supabase
+    .from("delivery_requests")
+    .select("delivery_day_id")
+    .eq("customer_id", customerId)
+    .in("delivery_day_id", open.map((d) => d.id));
+  const requested = new Set((requests ?? []).map((r) => r.delivery_day_id));
+  return open.map((day) => ({ day, requested: requested.has(day.id) }));
 }
 
 /**
@@ -143,13 +198,15 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
   const { data: day } = await service.from("delivery_days").select("*").eq("id", dayId).single<DeliveryDay>();
   if (!day || day.status !== "abierto" || day.orders_generated_at) return null;
 
-  const { data: subsData, error: subsError } = await service
-    .from("subscriptions")
-    .select("customer_id, status, frequency, delivery_weekday, anchor_date")
-    .eq("status", "activa")
-    .eq("delivery_weekday", isoWeekday(day.date));
+  const [{ data: subsData, error: subsError }, { data: requestsData }] = await Promise.all([
+    service.from("subscriptions").select("customer_id, status, frequency, delivery_weekday, anchor_date").eq("status", "activa"),
+    service.from("delivery_requests").select("customer_id").eq("delivery_day_id", day.id),
+  ]);
   if (subsError) throw subsError;
-  const subs = (subsData ?? []).filter((s) => isDueOn(toCadence(s), day.date));
+  const requested = new Set((requestsData ?? []).map((r) => r.customer_id as string));
+  const subs = (subsData ?? []).filter((s) =>
+    s.frequency === "por_envio" ? requested.has(s.customer_id) : isDueOn(toCadence(s), day.date),
+  );
   const customerIds = subs.map((s) => s.customer_id);
 
   const [profiles, basket, shops, availability, settings] = await Promise.all([
@@ -157,17 +214,17 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
       ? service.from("profiles").select("id, full_name, phone, address, postal_code").in("id", customerIds)
       : Promise.resolve({ data: [] }),
     customerIds.length
-      ? service.from("basket_items").select("customer_id, product_id, quantity").in("customer_id", customerIds)
+      ? service.from("basket_items").select("customer_id, product_id, quantity, slot").in("customer_id", customerIds)
       : Promise.resolve({ data: [] }),
     service.from("shops").select("id, active"),
     service
       .from("shop_availability")
       .select("shop_id, product_id, available")
       .in("shop_id", [day.fruteria_id, day.pescaderia_id].filter((id): id is string => Boolean(id))),
-    service.from("settings").select("min_order_cents").single(),
+    service.from("settings").select("min_order_cents, delivery_fee_cents").single(),
   ]);
 
-  const basketRows = (basket.data ?? []) as { customer_id: string; product_id: string; quantity: number }[];
+  const basketRows = (basket.data ?? []) as { customer_id: string; product_id: string; quantity: number; slot: number }[];
   const productIds = [...new Set(basketRows.map((b) => b.product_id))];
   const { data: productsData } = productIds.length
     ? await service.from("products").select("id, name, category, shop_id, unit, price_cents, active").in("id", productIds)
@@ -186,9 +243,15 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
         address: p?.address ?? null,
         postalCode: p?.postal_code ?? null,
         subscription: toCadence(s),
+        requestedDelivery: requested.has(s.customer_id),
       };
     }),
-    basket: basketRows.map((b) => ({ customerId: b.customer_id, productId: b.product_id, quantity: Number(b.quantity) })),
+    basket: basketRows.map((b) => ({
+      customerId: b.customer_id,
+      productId: b.product_id,
+      quantity: Number(b.quantity),
+      slot: b.slot,
+    })),
     products: ((productsData ?? []) as { id: string; name: string; category: ProductCategory; shop_id: string | null; unit: "kg" | "unidad" | "bandeja"; price_cents: number; active: boolean }[]).map((p) => ({
       id: p.id,
       name: p.name,
@@ -205,6 +268,7 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
     })),
     activeShopIds: ((shops.data ?? []) as { id: string; active: boolean }[]).filter((s) => s.active).map((s) => s.id),
     minOrderCents: settings.data?.min_order_cents ?? 0,
+    deliveryFeeCents: settings.data?.delivery_fee_cents ?? 0,
   });
 
   const report: GenerationReport = {
@@ -232,6 +296,7 @@ function toOrderPayload(o: PlannedOrder) {
     address: o.address,
     postal_code: o.postalCode,
     estimated_total_cents: o.estimatedTotalCents,
+    delivery_fee_cents: o.deliveryFeeCents,
     skipped_items: o.skippedItems,
     shops: o.shops.map((s) => ({
       shop_id: s.shopId,

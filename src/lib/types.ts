@@ -42,7 +42,10 @@ export type Product = {
 };
 
 export type Settings = {
-  subscription_price_cents: number;
+  price_dos_por_semana_cents: number;
+  price_semanal_cents: number;
+  price_quincenal_cents: number;
+  delivery_fee_cents: number;
   allowed_postal_codes: string[];
   min_order_cents: number;
   default_commission_pct: number;
@@ -104,6 +107,8 @@ export type Order = {
   postal_code: string | null;
   estimated_total_cents: number;
   final_total_cents: number | null;
+  /** Gastos de envío (plan de pago por envío) */
+  delivery_fee_cents: number;
   payment_status: PaymentStatus;
   stripe_payment_intent_id: string | null;
   payment_error: string | null;

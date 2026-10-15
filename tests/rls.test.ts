@@ -122,6 +122,13 @@ describe("cliente", () => {
     expect(other).toEqual([]);
   });
 
+  it("otro cliente tampoco ve los pedidos de los demás", async () => {
+    const { data } = await pau.from("orders").select("id").eq("delivery_day_id", dayId);
+    expect(data!.map((o) => o.id)).toEqual([pauOrderId]);
+    const { data: items } = await pau.from("order_items").select("id, shop_orders!inner(order_id)").eq("shop_orders.order_id", luciaOrderId);
+    expect(items).toEqual([]);
+  });
+
   it("ve el detalle de su pedido por tienda", async () => {
     const { data: parts } = await lucia.from("shop_orders").select("id, order_items(id)").eq("order_id", luciaOrderId);
     expect(parts).toHaveLength(2);

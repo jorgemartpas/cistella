@@ -116,7 +116,13 @@ async function OrderDetail({ params }: Pick<PageProps<"/pedidos/[id]">, "params"
 
       <Card className="mt-6 space-y-1">
         <div className="flex items-baseline justify-between">
-          <span className="font-semibold">{order.final_total_cents !== null ? "Total cobrado" : "Total"}</span>
+          <span className="font-semibold">
+            {order.payment_status === "pagado"
+              ? "Total cobrado"
+              : order.final_total_cents !== null
+                ? "Total con el peso real"
+                : "Total"}
+          </span>
           <span className="text-xl font-bold">{formatEuros(total)}</span>
         </div>
         {order.final_total_cents === null && (

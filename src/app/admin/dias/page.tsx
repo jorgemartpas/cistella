@@ -95,19 +95,17 @@ async function Days() {
                   {capitalize(WEEKDAY_NAMES[weekday])}
                 </label>
                 <div className="flex items-center gap-2 pl-8 text-sm">
-                  <span className="text-muted">Cierre</span>
                   <Select
                     name={`days_${weekday}`}
                     defaultValue={rule?.cutoffDaysBefore ?? 1}
                     className="min-w-0 flex-1 py-2"
                     aria-label={`Días antes, ${WEEKDAY_NAMES[weekday]}`}
                   >
-                    <option value={0}>el mismo día</option>
-                    <option value={1}>la víspera</option>
-                    <option value={2}>2 días antes</option>
-                    <option value={3}>3 días antes</option>
+                    <option value={0}>Cierre el mismo día</option>
+                    <option value={1}>Cierre la víspera</option>
+                    <option value={2}>Cierre 2 días antes</option>
+                    <option value={3}>Cierre 3 días antes</option>
                   </Select>
-                  <span className="text-muted">a las</span>
                   <Input
                     type="time"
                     name={`time_${weekday}`}

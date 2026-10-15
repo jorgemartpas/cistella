@@ -1,16 +1,124 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui";
+import { Icon, type IconName } from "@/components/icons";
+import { Badge, ButtonLink, Card, PageHeader, PageSkeleton, SectionTitle } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
+import { closeDueDeliveryDays, ensureDeliveryDays } from "@/lib/delivery";
+import { madridDate } from "@/lib/domain/dates";
+import { formatEuros } from "@/lib/domain/money";
+import { capitalize, formatCutoff, formatDay, plural } from "@/lib/format";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import type { DeliveryDay } from "@/lib/types";
 
-export default function Page() {
+export const metadata: Metadata = { title: "Admin" };
+
+const links: { href: string; label: string; icon: IconName; text: string }[] = [
+  { href: "/admin/clientes", label: "Clientes", icon: "users", text: "Suscripciones y datos de contacto" },
+  { href: "/admin/ventas", label: "Ventas y comisiones", icon: "chart", text: "Lo vendido por cada tienda, por meses" },
+  { href: "/admin/ajustes", label: "Ajustes", icon: "sliders", text: "Pedido mínimo, zona de reparto, comisión" },
+];
+
+export default function AdminHome() {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <Content />
-    </Suspense>
+    <>
+      <PageHeader title="Hola, equipo" />
+      <Suspense fallback={<PageSkeleton />}>
+        <Dashboard />
+      </Suspense>
+      <SectionTitle>Más</SectionTitle>
+      <ul className="space-y-2">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href}>
+              <Card className="flex items-center gap-3 hover:bg-surface-2">
+                <Icon name={l.icon} className="size-6 text-primary" />
+                <div className="flex-1">
+                  <p className="font-semibold">{l.label}</p>
+                  <p className="text-sm text-muted">{l.text}</p>
+                </div>
+                <Icon name="chevron" className="size-5 text-muted" />
+              </Card>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
-async function Content() {
-  const profile = await requireRole("cliente", "tienda", "admin");
-  return <p>Hola, {profile.full_name}</p>;
+async function Dashboard() {
+  await requireRole("admin");
+  const service = createServiceClient();
+  await ensureDeliveryDays(service);
+  await closeDueDeliveryDays(service);
+
+  const supabase = await createClient();
+  const today = madridDate(new Date());
+  const [{ data: subs }, { data: days }, { data: failed }, { data: settings }] = await Promise.all([
+    supabase.from("subscriptions").select("status"),
+    supabase.from("delivery_days").select("*").gte("date", today).neq("status", "cancelado").order("date").limit(4),
+    supabase.from("orders").select("id").eq("payment_status", "fallido"),
+    supabase.from("settings").select("subscription_price_cents").single(),
+  ]);
+  const count = (status: string) => (subs ?? []).filter((s) => s.status === status).length;
+  const active = count("activa");
+  const upcoming = (days ?? []) as DeliveryDay[];
+  const nextClosed = upcoming.find((d) => d.status === "cerrado");
+  const nextOpen = upcoming.find((d) => d.status === "abierto");
+
+  let progress: { orders: number; delivered: number } | null = null;
+  if (nextClosed) {
+    const { data: orders } = await supabase.from("orders").select("status").eq("delivery_day_id", nextClosed.id);
+    progress = {
+      orders: orders?.length ?? 0,
+      delivered: (orders ?? []).filter((o) => !["pendiente", "preparado", "en_reparto"].includes(o.status)).length,
+    };
+  }
+
+  return (
+    <>
+      {nextClosed && progress && (
+        <Card className="mb-3 border-transparent bg-primary-soft">
+          <p className="text-sm text-primary">{nextClosed.date === today ? "Reparto de hoy" : "Próximo reparto"}</p>
+          <p className="text-xl font-bold">{capitalize(formatDay(nextClosed.date))}</p>
+          <p className="mt-1 text-sm">
+            {plural(progress.orders, "pedido")} · {plural(progress.delivered, "entrega cerrada", "entregas cerradas")}
+          </p>
+          <ButtonLink href={`/admin/reparto?dia=${nextClosed.id}`} className="mt-3 w-full">
+            <Icon name="truck" /> Ir al reparto
+          </ButtonLink>
+        </Card>
+      )}
+      {nextOpen && (
+        <Card className="mb-3">
+          <p className="text-sm text-muted">Siguiente cierre de pedidos</p>
+          <p className="font-semibold first-letter:uppercase">{formatCutoff(nextOpen.cutoff_at)}</p>
+          <p className="text-sm text-muted">Para el reparto del {formatDay(nextOpen.date)}.</p>
+        </Card>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <Card>
+          <p className="text-sm text-muted">Suscripciones activas</p>
+          <p className="text-2xl font-bold tabular-nums">{active}</p>
+          <p className="text-xs text-muted">
+            {count("pausada")} pausadas · {count("impagada")} con pago pendiente
+          </p>
+        </Card>
+        <Card>
+          <p className="text-sm text-muted">Cuotas al mes</p>
+          <p className="text-2xl font-bold tabular-nums">{formatEuros(active * (settings?.subscription_price_cents ?? 2000))}</p>
+          <p className="text-xs text-muted">IVA incluido</p>
+        </Card>
+      </div>
+      {(failed?.length ?? 0) > 0 && (
+        <Link href="/admin/reparto" className="mt-3 block">
+          <Card className="flex items-center justify-between border-transparent bg-danger-soft text-danger">
+            <span className="font-semibold">{plural(failed!.length, "cobro fallido", "cobros fallidos")}</span>
+            <Badge tone="danger">Revisar</Badge>
+          </Card>
+        </Link>
+      )}
+    </>
+  );
 }

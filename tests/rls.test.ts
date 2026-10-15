@@ -198,6 +198,35 @@ describe("cliente", () => {
     expect(basketError?.code).toBe("42501");
   });
 
+  it("guarda sus listas y cestas, y nadie más las ve ni las toca", async () => {
+    const { data: products } = await lucia.from("products").select("id").limit(2);
+    const { data: list, error } = await lucia.from("saved_lists").insert({ kind: "cesta", name: "Cesta de prueba" }).select("id, customer_id").single();
+    expect(error).toBeNull();
+    expect(list!.customer_id).toBe(luciaId);
+    const add = await lucia.from("saved_list_items").insert({ list_id: list!.id, product_id: products![0].id, quantity: 0.75 });
+    expect(add.error).toBeNull();
+
+    // Otro cliente: ni la ve, ni añade, ni borra
+    const { data: seen } = await pau.from("saved_lists").select("id").eq("id", list!.id);
+    expect(seen).toEqual([]);
+    const { data: seenItems } = await pau.from("saved_list_items").select("product_id").eq("list_id", list!.id);
+    expect(seenItems).toEqual([]);
+    const intrude = await pau.from("saved_list_items").insert({ list_id: list!.id, product_id: products![1].id });
+    expect(intrude.error?.code).toBe("42501");
+    const forOther = await pau.from("saved_lists").insert({ customer_id: luciaId, kind: "lista", name: "Intrusa" });
+    expect(forOther.error?.code).toBe("42501");
+    const removed = await pau.from("saved_lists").delete().eq("id", list!.id).select("id");
+    expect(removed.data).toEqual([]);
+    const { data: anonSeen, error: anonError } = await anon.from("saved_lists").select("id");
+    expect(anonError ?? anonSeen).toBeTruthy();
+    expect(anonSeen ?? []).toEqual([]);
+
+    const own = await lucia.from("saved_lists").delete().eq("id", list!.id).select("id");
+    expect(own.data).toHaveLength(1);
+    const { data: orphan } = await service.from("saved_list_items").select("product_id").eq("list_id", list!.id);
+    expect(orphan).toEqual([]);
+  });
+
   it("no puede marcar su pedido como entregado", async () => {
     await lucia.from("orders").update({ status: "entregado" }).eq("id", luciaOrderId);
     const { data } = await service.from("orders").select("status").eq("id", luciaOrderId).single();

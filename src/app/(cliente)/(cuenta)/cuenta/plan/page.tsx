@@ -130,16 +130,16 @@ async function Account() {
                 </form>
               )}
               {sub.cancel_at_period_end ? (
-                <form action={changeSubscription.bind(null, "mantener")}>
+                <form action={changeSubscription.bind(null, "mantener")} className={trial ? "sm:col-span-2" : undefined}>
                   <SubmitButton variant="secondary" className="w-full">
                     Seguir suscrito
                   </SubmitButton>
                 </form>
               ) : (
-                <form action={changeSubscription.bind(null, "cancelar")}>
+                <form action={changeSubscription.bind(null, "cancelar")} className={trial ? "sm:col-span-2" : undefined}>
                   <ConfirmButton
                     variant="danger"
-                    className={trial ? "w-full sm:col-span-2" : "w-full"}
+                    className="w-full"
                     message={
                       trial
                         ? "Estás en la prueba gratis: tu plan terminará con ella y no pagarás ninguna cuota. ¿Darte de baja?"

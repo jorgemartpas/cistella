@@ -9,7 +9,7 @@ import { cx } from "../ui";
 
 const SECTIONS = [
   { href: "/categorias", label: "Categorías" },
-  { href: "/listas", label: "Listas y cestas" },
+  { href: "/cestas-guardadas", label: "Cestas guardadas" },
 ];
 
 /** Enlaces de la cabecera, con la raya verde debajo del que está activo. */
@@ -48,7 +48,7 @@ const CUSTOMER_MENU: MenuItem[] = [
   { href: "/cuenta", label: "Mi plan", icon: "calendar" },
   { href: "/cuenta/datos", label: "Datos personales", icon: "user" },
   { href: "/cuenta/pago", label: "Método de pago", icon: "card" },
-  { href: "/listas", label: "Listas y cestas", icon: "bookmark" },
+  { href: "/cestas-guardadas", label: "Cestas guardadas", icon: "bookmark" },
   { href: "/ayuda", label: "Preguntas frecuentes", icon: "help" },
 ];
 

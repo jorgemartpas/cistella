@@ -39,8 +39,12 @@ export const CUSTOMER_FAQS: Faq[] = [
     a: "Sí. En tu cesta, pulsa sobre la cantidad (por ejemplo «0,5 kg») y escribe la que quieras, como «0,3».",
   },
   {
-    q: "¿Qué diferencia hay entre una lista y una cesta guardada?",
-    a: "Una lista es un grupo de productos que quieres tener a mano (se guardan con el marcador de su foto) y puedes añadirlos a tu cesta cuando quieras. Una cesta guardada es una cesta completa, con sus cantidades, para volver a usarla de golpe.",
+    q: "¿Qué son las cestas guardadas?",
+    a: "Cestas que guardas para repetirlas: desde Mi cesta («Guardar esta cesta») o añadiendo productos con el marcador de su foto. Con «Usar esta cesta» tu cesta pasa a ser esa; con «Añadir a mi cesta», se suman los productos que te falten.",
+  },
+  {
+    q: "¿Qué es el envío automático?",
+    a: "Eliges una cesta guardada y cada reparto de tu plan se prepara solo con ella, sin tener que confirmar. Si cambias algo en Mi cesta, vale solo para el reparto siguiente; después vuelve a ser la guardada. Si un día no lo quieres, pulsa «Saltar este reparto» en Mi cesta. Es para los planes con reparto fijo (no para pago por envío).",
   },
   {
     q: "¿Qué pasa si una tienda no tiene un producto?",

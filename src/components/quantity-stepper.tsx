@@ -19,6 +19,7 @@ export function QuantityStepper({
   quantity,
   slot = 0,
   variant = "row",
+  action = setBasketQuantity,
 }: {
   productId: string;
   productName: string;
@@ -28,6 +29,8 @@ export function QuantityStepper({
   slot?: number;
   /** "card": a todo el ancho, para las tarjetas de producto */
   variant?: "row" | "card";
+  /** Qué guarda el cambio: la cesta (por defecto) o, por ejemplo, una cesta guardada */
+  action?: (productId: string, quantity: number, slot: number) => Promise<{ error?: string }>;
 }) {
   const [pending, startTransition] = useTransition();
   const [optimistic, setOptimistic] = useOptimistic(quantity);
@@ -41,7 +44,7 @@ export function QuantityStepper({
     setError(null);
     startTransition(async () => {
       setOptimistic(value);
-      const result = await setBasketQuantity(productId, value, slot);
+      const result = await action(productId, value, slot);
       if (result.error) setError(result.error);
     });
   };

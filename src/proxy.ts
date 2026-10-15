@@ -7,7 +7,7 @@ import { supabasePublicConfig } from "@/lib/supabase/config";
 const PROTECTED = [
   "/inicio",
   "/bienvenida",
-  "/listas",
+  "/cestas-guardadas",
   "/pedidos",
   "/cuenta",
   "/ayuda",

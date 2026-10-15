@@ -10,7 +10,7 @@ import { TIME_ZONE } from "@/lib/domain/dates";
 import { formatEuros } from "@/lib/domain/money";
 import { capitalize, formatCutoff, formatDateTime, formatDay, plural } from "@/lib/format";
 import { DAY_STATUS, SKIP_REASONS } from "@/lib/labels";
-import { getScheduleRules } from "@/lib/delivery";
+import { dayDemand, getScheduleRules } from "@/lib/delivery";
 import { isoWeekday } from "@/lib/domain/dates";
 import { reopenBlocker } from "@/lib/domain/orders";
 import { cutoffFor } from "@/lib/domain/schedule";
@@ -88,10 +88,7 @@ async function OpenDay({ day, shops }: { day: DeliveryDay; shops: Awaited<Return
   const fruterias = shops.filter((s) => s.type === "fruteria");
   const pescaderias = shops.filter((s) => s.type === "pescaderia");
   const supabase = await createClient();
-  const { count: confirmed } = await supabase
-    .from("delivery_requests")
-    .select("customer_id", { count: "exact", head: true })
-    .eq("delivery_day_id", day.id);
+  const demand = await dayDemand(supabase, day);
   return (
     <>
       <p className="mb-2 text-muted">
@@ -99,7 +96,10 @@ async function OpenDay({ day, shops }: { day: DeliveryDay; shops: Awaited<Return
         <strong className="text-text">{formatCutoff(day.cutoff_at)}</strong>. A esa hora se generan los pedidos de cada
         tienda con las cestas confirmadas.
       </p>
-      <p className="mb-4 font-semibold">Pedidos confirmados hasta ahora: {confirmed ?? 0}</p>
+      <p className="mb-4 font-semibold">
+        Pedidos confirmados hasta ahora: {demand.confirmed}
+        {demand.automatic > 0 && ` · con envío automático: ${demand.automatic}`}
+      </p>
       <ActionForm action={updateDay}>
         <input type="hidden" name="id" value={day.id} />
         <Field label="Cierre de pedidos (hora de Alzira)">

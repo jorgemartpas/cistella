@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
     // y queda por debajo del límite de 4,5 MB de las funciones de Vercel.
     serverActions: { bodySizeLimit: "4mb" },
   },
+  // Listas y cestas pasaron a ser solo «Cestas guardadas»
+  async redirects() {
+    return [
+      { source: "/listas", destination: "/cestas-guardadas", permanent: false },
+      { source: "/listas/:id", destination: "/cestas-guardadas/:id", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
-import { createList, setListItem } from "@/lib/actions/lists";
+import { createSavedBasket, setListItem } from "@/lib/actions/lists";
 import { Icon } from "../icons";
 import { cx } from "../ui";
 
-/** Botón de marcador de cada producto: lo guarda en una o varias listas del cliente. */
+/** Botón de marcador de cada producto: lo guarda (con su cantidad) en una o varias cestas guardadas. */
 export function SaveToList({
   productId,
   productName,
@@ -56,8 +56,8 @@ export function SaveToList({
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        aria-label={`Guardar ${productName} en una lista`}
-        title="Guardar en una lista"
+        aria-label={`Guardar ${productName} en una cesta guardada`}
+        title="Guardar en una cesta guardada"
         className={cx(
           "flex size-9 items-center justify-center rounded-full bg-surface shadow-sm ring-1 ring-border",
           saved ? "text-primary" : "text-muted hover:text-text",
@@ -67,7 +67,7 @@ export function SaveToList({
       </button>
       {open && (
         <div className="card-surface absolute right-0 top-11 z-20 w-60 p-3 text-left">
-          <p className="mb-2 text-sm font-bold">Guardar en una lista</p>
+          <p className="mb-2 text-sm font-bold">Guardar en una cesta guardada</p>
           {lists.length > 0 && (
             <ul className="mb-2 max-h-48 space-y-1 overflow-y-auto">
               {lists.map((list) => (
@@ -94,7 +94,7 @@ export function SaveToList({
               const name = String(new FormData(form).get("name") ?? "");
               setError(null);
               startTransition(async () => {
-                const result = await createList(name, productId);
+                const result = await createSavedBasket(name, productId);
                 if (result.error) setError(result.error);
                 else form.reset();
               });
@@ -102,8 +102,8 @@ export function SaveToList({
           >
             <input
               name="name"
-              placeholder="Nueva lista"
-              aria-label="Nombre de la nueva lista"
+              placeholder="Nueva cesta"
+              aria-label="Nombre de la nueva cesta"
               maxLength={60}
               className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
               required

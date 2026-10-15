@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { ConfirmOrder } from "@/components/confirm-order";
+import { AutoOrder, ConfirmOrder } from "@/components/confirm-order";
 import { DeliveryRequestToggle } from "@/components/delivery-request-toggle";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Icon } from "@/components/icons";
@@ -50,7 +50,9 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
       <DeliveryBar />
       <h1 className="text-3xl font-extrabold tracking-tight">{dayName ? `Mi cesta del ${dayName}` : "Mi cesta"}</h1>
       <p className="mb-6 mt-0.5 text-sm text-muted">
-        Se guarda sola. Antes de cada reparto, revísala y confirma el pedido.
+        {ctx.toConfirm?.auto
+          ? "Se guarda sola. Con el envío automático, cada reparto se prepara solo con ella."
+          : "Se guarda sola. Antes de cada reparto, revísala y confirma el pedido."}
       </p>
       {confirmar === "1" && ctx.isActive && (
         <div className="mb-6">
@@ -159,6 +161,15 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
                   href="/bienvenida?confirmar=1"
                   text="Para confirmarlo, elige tu plan. Tu cesta no se pierde."
                 />
+              ) : ctx.toConfirm?.auto && ctx.autoBasket ? (
+                <AutoOrder
+                  key={ctx.toConfirm.day.id}
+                  dayId={ctx.toConfirm.day.id}
+                  skipped={ctx.toConfirm.skipped}
+                  dayLabel={formatDay(ctx.toConfirm.day.date)}
+                  cutoffLabel={formatCutoff(ctx.toConfirm.day.cutoff_at)}
+                  basketName={ctx.autoBasket.name}
+                />
               ) : (
                 ctx.toConfirm && (
                   <ConfirmOrder
@@ -183,7 +194,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
                   <Icon name="down" className="size-4 transition-transform group-open:rotate-180" />
                 </summary>
                 <p className="mb-3 mt-2 text-sm text-muted">
-                  Para volver a usarla otro día (por ejemplo, «Cesta de verano»). La tendrás en Listas y cestas.
+                  Para volver a usarla otro día (por ejemplo, «Cesta de verano»). La tendrás en Cestas guardadas.
                 </p>
                 <ActionForm action={saveBasket}>
                   <input type="hidden" name="slot" value={ctx.slot} />

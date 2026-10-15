@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
-import { confirmDelivery } from "@/lib/actions/basket";
+import { confirmDelivery, setDeliverySkip } from "@/lib/actions/basket";
 import { Icon } from "./icons";
 import { buttonStyles, cx } from "./ui";
 
@@ -76,6 +76,76 @@ export function ConfirmOrder({
             Confírmalo antes del {cutoffLabel}. Si no, ese día no te llevamos nada.{note && ` ${note}`}
           </p>
         </>
+      )}
+      {error && (
+        <p role="alert" className="text-center text-sm font-medium text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Envío automático: el reparto se prepara solo con la cesta; se puede saltar (o recuperar). */
+export function AutoOrder({
+  dayId,
+  skipped,
+  dayLabel,
+  cutoffLabel,
+  basketName,
+}: {
+  dayId: string;
+  skipped: boolean;
+  dayLabel: string;
+  cutoffLabel: string;
+  /** Cesta guardada a la que vuelve la cesta después de cada reparto */
+  basketName: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [optimistic, setOptimistic] = useOptimistic(skipped);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggle = () => {
+    setError(null);
+    startTransition(async () => {
+      setOptimistic(!optimistic);
+      const result = await setDeliverySkip(dayId, !optimistic);
+      if (result.error) setError(result.error);
+    });
+  };
+
+  return (
+    <div id="confirmar" className="mt-3 scroll-mt-20 space-y-2">
+      {optimistic ? (
+        <div role="status" className="rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning">
+          <p className="text-base font-semibold">Has saltado el reparto del {dayLabel}</p>
+          <p className="mt-1">Ese día no te llevamos nada. El envío automático sigue en los siguientes repartos.</p>
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={pending}
+            className="mt-2 font-semibold underline underline-offset-2 disabled:opacity-50"
+          >
+            Recuperar este reparto
+          </button>
+        </div>
+      ) : (
+        <div role="status" className="rounded-lg bg-primary-soft px-4 py-3 text-sm text-primary">
+          <p className="text-base font-semibold">
+            <span aria-hidden>🔁</span> Envío automático: tu pedido del {dayLabel} se prepara solo
+          </p>
+          <p className="mt-1">
+            Con lo que haya en tu cesta el {cutoffLabel}. Después tu cesta vuelve a ser «{basketName}».
+          </p>
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={pending}
+            className="mt-2 font-semibold underline underline-offset-2 disabled:opacity-50"
+          >
+            Saltar este reparto
+          </button>
+        </div>
       )}
       {error && (
         <p role="alert" className="text-center text-sm font-medium text-danger">

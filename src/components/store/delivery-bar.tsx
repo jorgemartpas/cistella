@@ -64,7 +64,18 @@ export async function DeliveryBar() {
       <>
         Próximo reparto el <strong>{formatDay(next.date)}</strong>
         {where}.{" "}
-        {toConfirm?.confirmed ? (
+        {toConfirm?.auto ? (
+          toConfirm.skipped ? (
+            <>
+              <span className="rounded-full bg-surface px-2.5 py-0.5 text-sm font-bold text-warning">Saltado</span>{" "}
+              <BarLink href="/cesta#confirmar">Recuperarlo</BarLink>
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-0.5 text-sm font-bold text-primary">
+              <span aria-hidden>🔁</span> Envío automático
+            </span>
+          )
+        ) : toConfirm?.confirmed ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-0.5 text-sm font-bold text-primary">
             <Icon name="check" className="size-4" /> Confirmado
           </span>

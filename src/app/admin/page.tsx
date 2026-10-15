@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { Badge, ButtonLink, Card, PageHeader, PageSkeleton, SectionTitle } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
-import { closeDueDeliveryDays, ensureDeliveryDays } from "@/lib/delivery";
+import { closeDueDeliveryDays, dayDemand, ensureDeliveryDays } from "@/lib/delivery";
 import { madridDate } from "@/lib/domain/dates";
 import { formatEuros } from "@/lib/domain/money";
 import { capitalize, formatCutoff, formatDay, plural } from "@/lib/format";
@@ -74,12 +74,7 @@ async function Dashboard() {
   const nextClosed = upcoming.find((d) => d.status === "cerrado");
   const nextOpen = upcoming.find((d) => d.status === "abierto");
 
-  const { count: confirmed } = nextOpen
-    ? await supabase
-        .from("delivery_requests")
-        .select("customer_id", { count: "exact", head: true })
-        .eq("delivery_day_id", nextOpen.id)
-    : { count: 0 };
+  const demand = nextOpen ? await dayDemand(supabase, nextOpen) : { confirmed: 0, automatic: 0 };
 
   let progress: { orders: number; delivered: number } | null = null;
   if (nextClosed) {
@@ -109,7 +104,8 @@ async function Dashboard() {
           <p className="text-sm text-muted">Siguiente cierre de pedidos</p>
           <p className="font-semibold first-letter:uppercase">{formatCutoff(nextOpen.cutoff_at)}</p>
           <p className="text-sm text-muted">
-            Para el reparto del {formatDay(nextOpen.date)} · {plural(confirmed ?? 0, "pedido confirmado", "pedidos confirmados")}
+            Para el reparto del {formatDay(nextOpen.date)} · {plural(demand.confirmed, "pedido confirmado", "pedidos confirmados")}
+            {demand.automatic > 0 && ` · ${demand.automatic} con envío automático`}
           </p>
         </Card>
       )}

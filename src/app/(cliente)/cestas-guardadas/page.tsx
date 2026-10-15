@@ -6,41 +6,39 @@ import { Icon } from "@/components/icons";
 import { ApplyListButton } from "@/components/store/apply-list-button";
 import { ProductGrid } from "@/components/store/product-grid";
 import { Tabs } from "@/components/store/tabs";
-import { EmptyState, Input, PageSkeleton } from "@/components/ui";
-import { createListForm } from "@/lib/actions/lists";
+import { Badge, EmptyState, Input, PageSkeleton } from "@/components/ui";
+import { createSavedBasketForm } from "@/lib/actions/lists";
 import { getCustomerContext, getUsualProductIds } from "@/lib/client-context";
-import { formatEuros, lineTotalCents } from "@/lib/domain/money";
+import { formatEuros, lineTotalCents, type ProductUnit } from "@/lib/domain/money";
 import { WEEKDAY_NAMES } from "@/lib/domain/schedule";
 import { plural } from "@/lib/format";
+import { defaultQuantity } from "@/lib/saved-baskets";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Listas y cestas" };
+export const metadata: Metadata = { title: "Cestas guardadas" };
 
 const TABS = [
-  { key: "habituales", label: "Mis habituales", href: "/listas" },
-  { key: "listas", label: "Listas", href: "/listas?ver=listas" },
-  { key: "cestas", label: "Cestas guardadas", href: "/listas?ver=cestas" },
+  { key: "cestas", label: "Cestas guardadas", href: "/cestas-guardadas" },
+  { key: "habituales", label: "Mis habituales", href: "/cestas-guardadas?ver=habituales" },
 ];
 
-export default function ListsPage({ searchParams }: PageProps<"/listas">) {
+export default function SavedBasketsPage({ searchParams }: PageProps<"/cestas-guardadas">) {
   return (
     <div className="mx-auto max-w-5xl">
       <Suspense fallback={<PageSkeleton />}>
-        <Lists searchParams={searchParams} />
+        <SavedBasketsTabs searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function Lists({ searchParams }: Pick<PageProps<"/listas">, "searchParams">) {
+async function SavedBasketsTabs({ searchParams }: Pick<PageProps<"/cestas-guardadas">, "searchParams">) {
   const { ver } = await searchParams;
-  const current = ver === "listas" || ver === "cestas" ? ver : "habituales";
+  const current = ver === "habituales" ? "habituales" : "cestas";
   return (
     <>
       <Tabs tabs={TABS} current={current} />
-      {current === "habituales" && <Usual />}
-      {current === "listas" && <SavedLists />}
-      {current === "cestas" && <SavedBaskets />}
+      {current === "cestas" ? <SavedBaskets /> : <Usual />}
     </>
   );
 }
@@ -59,50 +57,84 @@ async function Usual() {
   return <ProductGrid products={products} />;
 }
 
-async function SavedLists() {
+async function SavedBaskets() {
   const ctx = await getCustomerContext();
   const supabase = await createClient();
   const { data } = await supabase
     .from("saved_lists")
-    .select("id, name, saved_list_items(count)")
+    .select("id, name, auto_delivery, saved_list_items(quantity, products(price_cents, unit, active))")
     .eq("customer_id", ctx.profile.id)
-    .eq("kind", "lista")
     .order("updated_at", { ascending: false });
-  const lists = (data ?? []) as { id: string; name: string; saved_list_items: { count: number }[] }[];
+  const baskets = (data ?? []) as unknown as {
+    id: string;
+    name: string;
+    auto_delivery: boolean;
+    saved_list_items: {
+      quantity: number | null;
+      products: { price_cents: number; unit: ProductUnit; active: boolean } | null;
+    }[];
+  }[];
+  const basketLabel = ctx.dayBaskets ? `tu cesta del ${WEEKDAY_NAMES[ctx.slot]}` : "tu cesta";
 
   return (
-    <div className="space-y-6">
-      {lists.length === 0 ? (
-        <EmptyState icon="🔖" title="Aún no tienes listas">
-          Guarda productos con el marcador de su foto, o crea una lista aquí: «Para el cocido», «Desayunos»…
+    <div className="space-y-8">
+      <AutoDeliveryExplainer autoName={ctx.autoBasket?.name ?? null} perDelivery={ctx.perDelivery} />
+
+      {baskets.length === 0 ? (
+        <EmptyState icon="🧺" title="Aún no tienes cestas guardadas">
+          En Mi cesta, pulsa «Guardar esta cesta», o guarda productos con el marcador de su foto.
         </EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {lists.map((list) => (
-            <li key={list.id}>
-              <Link
-                href={`/listas/${list.id}`}
-                className="card-surface flex items-center gap-3 p-4 hover:ring-2 hover:ring-primary-soft"
-              >
-                <span className="flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary">
-                  <Icon name="bookmark" className="size-5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{list.name}</span>
-                  <span className="text-sm text-muted">{plural(list.saved_list_items[0]?.count ?? 0, "producto")}</span>
-                </span>
-                <Icon name="chevron" className="size-5 text-muted" />
-              </Link>
-            </li>
-          ))}
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {baskets.map((basket) => {
+            const items = basket.saved_list_items.filter((i) => i.products?.active);
+            const total = items.reduce(
+              (sum, i) => sum + lineTotalCents(Number(i.quantity ?? defaultQuantity(i.products!.unit)), i.products!.price_cents),
+              0,
+            );
+            return (
+              <li key={basket.id} className="card-surface flex flex-col p-4">
+                <Link href={`/cestas-guardadas/${basket.id}`} className="group flex items-start gap-3">
+                  <span
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xl"
+                    aria-hidden
+                  >
+                    🧺
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold group-hover:underline">{basket.name}</span>
+                    <span className="text-sm text-muted">
+                      {plural(items.length, "producto")} · {formatEuros(total)} aprox.
+                    </span>
+                    {basket.auto_delivery && (
+                      <span className="mt-1 block">
+                        <Badge tone="success">Envío automático</Badge>
+                      </span>
+                    )}
+                  </span>
+                  <Icon name="chevron" className="size-5 text-muted" />
+                </Link>
+                <ApplyListButton
+                  listId={basket.id}
+                  mode="sustituir"
+                  slot={ctx.slot}
+                  basketLabel={basketLabel}
+                  variant="outline"
+                  className="mt-4"
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
+
       <div className="card-surface mx-auto max-w-md p-5">
-        <h2 className="mb-3 font-bold">Nueva lista</h2>
-        <ActionForm action={createListForm}>
-          <Input name="name" placeholder="Nombre de la lista" aria-label="Nombre de la lista" maxLength={60} required />
+        <h2 className="mb-1 font-bold">Nueva cesta</h2>
+        <p className="mb-3 text-sm text-muted">Créala vacía y añade productos con el marcador de su foto.</p>
+        <ActionForm action={createSavedBasketForm}>
+          <Input name="name" placeholder="Nombre de la cesta" aria-label="Nombre de la cesta" maxLength={60} required />
           <SubmitButton variant="outline" className="w-full" pendingText="Creando…">
-            Crear lista
+            Crear cesta
           </SubmitButton>
         </ActionForm>
       </div>
@@ -110,58 +142,35 @@ async function SavedLists() {
   );
 }
 
-async function SavedBaskets() {
-  const ctx = await getCustomerContext();
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("saved_lists")
-    .select("id, name, saved_list_items(quantity, products(price_cents, active))")
-    .eq("customer_id", ctx.profile.id)
-    .eq("kind", "cesta")
-    .order("updated_at", { ascending: false });
-  const baskets = (data ?? []) as unknown as {
-    id: string;
-    name: string;
-    saved_list_items: { quantity: number | null; products: { price_cents: number; active: boolean } | null }[];
-  }[];
-  const basketLabel = ctx.dayBaskets ? `tu cesta del ${WEEKDAY_NAMES[ctx.slot]}` : "tu cesta";
-
-  if (baskets.length === 0) {
-    return (
-      <EmptyState icon="🧺" title="Aún no has guardado ninguna cesta">
-        En Mi cesta, pulsa «Guardar esta cesta» para tenerla a mano y volver a usarla cuando quieras.
-      </EmptyState>
-    );
-  }
+/** Qué son las cestas guardadas y cómo funciona el envío automático */
+function AutoDeliveryExplainer({ autoName, perDelivery }: { autoName: string | null; perDelivery: boolean }) {
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {baskets.map((basket) => {
-        const items = basket.saved_list_items.filter((i) => i.products?.active);
-        const total = items.reduce((sum, i) => sum + lineTotalCents(Number(i.quantity ?? 1), i.products!.price_cents), 0);
-        return (
-          <li key={basket.id} className="card-surface flex flex-col p-4">
-            <Link href={`/listas/${basket.id}`} className="group flex items-start gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-cart text-xl" aria-hidden>
-                🧺
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold group-hover:underline">{basket.name}</span>
-                <span className="text-sm text-muted">
-                  {plural(items.length, "producto")} · {formatEuros(total)} aprox.
-                </span>
-              </span>
-            </Link>
-            <ApplyListButton
-              listId={basket.id}
-              kind="cesta"
-              slot={ctx.slot}
-              basketLabel={basketLabel}
-              variant="outline"
-              className="mt-4"
-            />
-          </li>
-        );
-      })}
-    </ul>
+    <section className="card-surface grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+      <div>
+        <h2 className="flex items-center gap-2 text-lg font-extrabold">
+          <Icon name="bookmark" className="size-5 text-primary" /> Guarda tus cestas
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Guarda la cesta que más repites («Semana normal», «Barbacoa»…) desde Mi cesta, o ve añadiendo productos con
+          el marcador de su foto. Después la usas de un toque.
+        </p>
+      </div>
+      <div>
+        <h2 className="flex items-center gap-2 text-lg font-extrabold">
+          <span aria-hidden>🔁</span> Envío automático
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Elige una cesta guardada y cada reparto de tu plan se prepara solo con ella, sin tener que confirmar. Puedes
+          cambiar tu cesta para un reparto concreto o saltarlo; después vuelve a ser la guardada.
+        </p>
+        <p className="mt-2 text-sm font-semibold">
+          {perDelivery
+            ? "Con pago por envío pides cada reparto: el envío automático es para los planes con reparto fijo."
+            : autoName
+              ? `Ahora: envío automático con «${autoName}».`
+              : "Ahora: confirmas tú cada pedido. Actívalo dentro de una cesta guardada."}
+        </p>
+      </div>
+    </section>
   );
 }

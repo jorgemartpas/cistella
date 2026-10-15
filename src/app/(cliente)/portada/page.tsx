@@ -40,7 +40,7 @@ async function StoreHome() {
       </StoreSection>
 
       {usual.length > 0 && (
-        <StoreSection title="Tus habituales" subtitle="Lo que más pides" href="/listas" linkText="Ver todos">
+        <StoreSection title="Tus habituales" subtitle="Lo que más pides" href="/cestas-guardadas?ver=habituales" linkText="Ver todos">
           <ProductGrid products={usual} />
         </StoreSection>
       )}

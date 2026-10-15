@@ -5,7 +5,7 @@ Piloto v1 con 6 tiendas. Especificación en [SPEC.md](./SPEC.md); decisiones tom
 [DECISIONES.md](./DECISIONES.md).
 
 - **Visitante:** ve la tienda y llena la cesta sin cuenta; al confirmar el pedido crea la cuenta y elige el plan.
-- **Cliente:** elige plan (2 veces por semana 25 €/mes, cada semana 20 €/mes, cada 2 semanas 16 €/mes o pago por envío, 6 € por reparto), compra en su portal (al entrar, la portada es su tienda: buscador, categorías, listas y cestas guardadas, Mis habituales), confirma cada pedido antes del cierre y ve sus pedidos.
+- **Cliente:** elige plan (2 veces por semana 25 €/mes, cada semana 20 €/mes, cada 15 días 16 €/mes o pago por envío, 6 € por reparto), compra en su portal (al entrar, la portada es su tienda: buscador, categorías, cestas guardadas con envío automático, Mis habituales), confirma cada pedido antes del cierre y ve sus pedidos.
 - **Tienda:** las carnicerías gestionan sus productos; fruterías y pescaderías marcan qué tienen. Todas preparan sus pedidos, indican el peso real y ven sus ventas y comisión.
 - **Admin:** tiendas, catálogo unificado, días de reparto y rotación, reparto del día (recogidas y entregas), clientes, ventas y ajustes.
 
@@ -45,7 +45,7 @@ Contraseña de todas: `cistella-demo`.
 | --- | --- |
 | Admin | `admin@cistella.test` |
 | Tiendas | `oskinez@`, `reino@`, `ferrer@`, `tomas@`, `fruteria-a@`, `fruteria-b@` + `cistella.test` |
-| Clientes | `lucia@cistella.test` (cada semana, martes), `pau@cistella.test` (cada 2 semanas, viernes), `marta@cistella.test` (2 veces por semana), `toni@cistella.test` (pago por envío) |
+| Clientes | `lucia@cistella.test` (cada semana, martes), `pau@cistella.test` (cada 15 días, viernes), `marta@cistella.test` (2 veces por semana), `toni@cistella.test` (pago por envío) |
 
 ## Tests
 

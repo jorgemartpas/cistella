@@ -97,3 +97,68 @@ test("ciclo completo: el visitante llena la cesta, crea la cuenta al confirmar, 
   await expect(main(page).getByText("Entregado").first()).toBeVisible();
   await expect(main(page).getByText(/0,55 kg reales/)).toBeVisible();
 });
+
+test("envío automático: el reparto se prepara sin confirmar y la cesta vuelve a ser la guardada", async ({ browser }) => {
+  const basketName = `Semana normal ${Date.now() % 100000}`;
+  const lucia = await login(browser, "lucia@cistella.test");
+  lucia.on("dialog", (dialog) => dialog.accept());
+
+  // Parte de una cesta sin gambas (las añadirá después solo para un reparto)
+  await lucia.goto("/buscar?q=gambas");
+  const exact = main(lucia).getByRole("button", { name: /Escribir la cantidad exacta de Gambas/ });
+  if (await exact.count()) {
+    await exact.click();
+    await main(lucia).getByLabel("Cantidad exacta de Gambas").fill("0");
+    await lucia.keyboard.press("Enter");
+    await expect(main(lucia).getByRole("button", { name: "Añadir Gambas" })).toBeVisible();
+  }
+
+  // Guarda su cesta y activa el envío automático con ella
+  await lucia.goto("/cesta");
+  await main(lucia).getByText("Guardar esta cesta").click();
+  await main(lucia).getByLabel("Nombre de la cesta").fill(basketName);
+  await main(lucia).getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(main(lucia).getByText(/Guardada como/)).toBeVisible();
+  await lucia.goto("/cestas-guardadas");
+  await main(lucia).getByRole("link", { name: new RegExp(basketName) }).click();
+  await main(lucia).getByRole("button", { name: "Activar envío automático con esta cesta" }).click();
+  await expect(main(lucia).getByText(/Envío automático activado/)).toBeVisible();
+
+  // En la cesta ya no hay que confirmar; se puede saltar y recuperar el reparto
+  await lucia.goto("/cesta");
+  const auto = main(lucia).getByText(/Envío automático: tu pedido del martes/);
+  await expect(auto).toBeVisible();
+  const deliveryDay = (await auto.textContent())!.replace(/^.*tu pedido del /, "").replace(/ se prepara solo$/, "").trim();
+  await main(lucia).getByRole("button", { name: "Saltar este reparto" }).click();
+  await expect(main(lucia).getByText(/Has saltado el reparto/)).toBeVisible();
+  await main(lucia).getByRole("button", { name: "Recuperar este reparto" }).click();
+  await expect(auto).toBeVisible();
+
+  // Solo para este reparto, añade gambas
+  await lucia.goto("/buscar?q=gambas");
+  await main(lucia).getByRole("button", { name: "Añadir Gambas" }).click();
+  await expect(main(lucia).getByRole("group", { name: "Cantidad de Gambas" })).toBeVisible();
+
+  // El admin cierra el reparto: Lucía tiene pedido sin haberlo confirmado, con las gambas
+  const admin = await login(browser, "admin@cistella.test");
+  admin.on("dialog", (dialog) => dialog.accept());
+  await admin.goto("/admin/dias");
+  await main(admin).getByRole("link", { name: new RegExp(deliveryDay, "i") }).first().click();
+  await expect(main(admin).getByText(/con envío automático: \d+/)).toBeVisible();
+  await main(admin).getByRole("button", { name: "Cerrar ahora y generar pedidos" }).click();
+  await expect(main(admin).getByText(/generados el/)).toBeVisible();
+  const dayId = admin.url().split("/").pop()!;
+  await admin.goto(`/admin/reparto?dia=${dayId}`);
+  const order = main(admin).locator("li").filter({ hasText: "Lucía Martí" });
+  await expect(order.first()).toBeVisible();
+
+  // Después del reparto, su cesta vuelve a ser la guardada (sin las gambas)
+  await lucia.goto("/buscar?q=gambas");
+  await expect(main(lucia).getByRole("button", { name: "Añadir Gambas" })).toBeVisible();
+
+  // Deja a Lucía como estaba
+  await lucia.goto("/cestas-guardadas");
+  await main(lucia).getByRole("link", { name: new RegExp(basketName) }).click();
+  await main(lucia).getByRole("button", { name: "Quitar el envío automático" }).click();
+  await expect(main(lucia).getByText(/Envío automático desactivado/)).toBeVisible();
+});

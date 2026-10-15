@@ -5,13 +5,25 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { env } from "@/lib/env";
 
-/** Cliente con la sesión del usuario: todas las consultas pasan por RLS. */
-export async function createClient() {
+/**
+ * Cliente con la sesión del usuario: todas las consultas pasan por RLS.
+ *
+ * Next memoiza durante el render las peticiones GET idénticas, así que repetir una consulta
+ * después de escribir en la misma petición devuelve la respuesta de antes. Con `fresh`, las
+ * consultas no se memoizan (Next no memoiza un fetch con su propia señal de cancelación).
+ */
+export async function createClient({ fresh = false } = {}) {
   // Los datos de sesión son siempre de la petición (supabase-js consulta la hora al leer
   // la sesión, algo que no se puede prerenderizar).
   await connection();
   const cookieStore = await cookies();
   return createServerClient(env.supabaseUrl, env.supabaseAnonKey, {
+    ...(fresh && {
+      global: {
+        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+          fetch(input, { ...init, signal: init?.signal ?? new AbortController().signal }),
+      },
+    }),
     cookies: {
       getAll() {
         return cookieStore.getAll();

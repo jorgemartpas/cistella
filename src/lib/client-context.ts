@@ -119,18 +119,19 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
 
   let next: UpcomingDelivery | null = null;
   let requestable: RequestableDay[] = [];
+  // Después de crear los días de reparto se releen sin memoizar: si no, llegaría la lectura de antes
   if (profile && isActive && perDelivery) {
     requestable = await requestableDays(supabase, profile.id, now);
     if (requestable.length === 0) {
       await ensureDeliveryDays(createServiceClient(), now);
-      requestable = await requestableDays(supabase, profile.id, now);
+      requestable = await requestableDays(await createClient({ fresh: true }), profile.id, now);
     }
   } else if (profile && sub && isActive) {
     next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
     // Para poder confirmarlo, el día de reparto tiene que existir
     if (next && !next.day) {
       await ensureDeliveryDays(createServiceClient(), now, next.date);
-      next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
+      next = await nextDeliveryFor(await createClient({ fresh: true }), sub, now, dayBaskets ? slot : undefined);
     }
   }
   const closing = isActive && sub ? await closingDayFor(supabase, sub, now, auto) : null;

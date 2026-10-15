@@ -88,7 +88,7 @@ Cada tienda prepara (peso real) ──► El reparto recoge ──► Entrega �
 - **Generación de pedidos:** `src/lib/delivery.ts` planifica con el dominio y guarda todo en una transacción con la función SQL
   `create_orders_for_day`, que es idempotente (repetirla no duplica pedidos).
 - **Permisos:** RLS en todas las tablas (`supabase/migrations/`). Cada página comprueba además el rol con `requireRole()`.
-  Las tiendas solo ven su parte de cada pedido y el nombre del cliente. La clave de servicio solo se usa en el cron, los webhooks, el alta de cuentas de tienda, los cobros y al eliminar una cuenta de cliente.
+  Las tiendas solo ven su parte de cada pedido y el nombre del cliente. La clave de servicio solo se usa en el cron, los webhooks, el alta de cuentas de tienda, los cobros, al eliminar una cuenta de cliente y en la previsión del inventario de las tiendas (que suma las cestas confirmadas).
 - **Cobros:** `src/lib/payments.ts`. Al marcar la entrega, el pedido pasa a «procesando» (evita cobrar dos veces) y se cobra off-session a la tarjeta guardada en el alta.
 
 ### Estructura

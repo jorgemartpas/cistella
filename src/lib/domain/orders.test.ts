@@ -245,6 +245,82 @@ describe("generación de pedidos por tienda", () => {
   });
 });
 
+describe("planes de 2 veces por semana y de pago por envío", () => {
+  const twiceWeekly = customer("doble", {
+    subscription: { status: "activa", frequency: "dos_por_semana", deliveryWeekday: 2, anchorDate: "2026-10-20" },
+  });
+  const perDelivery = (requested: boolean) =>
+    customer("suelto", {
+      subscription: { status: "activa", frequency: "por_envio", deliveryWeekday: 2, anchorDate: "2026-10-20" },
+      requestedDelivery: requested,
+    });
+
+  it("2 veces por semana: el martes va la cesta del martes y el viernes la del viernes", () => {
+    const basket = [
+      { customerId: "doble", productId: "naranjas", quantity: 1, slot: 2 },
+      { customerId: "doble", productId: "merluza", quantity: 1, slot: 5 },
+      { customerId: "doble", productId: "lomo", quantity: 1, slot: 0 },
+    ];
+    const tuesday = planOrdersForDay(baseInput({ customers: [twiceWeekly], basket }));
+    expect(tuesday.orders[0].shops.flatMap((s) => s.items.map((i) => i.productId))).toEqual(["naranjas"]);
+
+    const friday = planOrdersForDay(
+      baseInput({
+        customers: [twiceWeekly],
+        basket,
+        day: { id: "day-fri", date: "2026-10-23", fruteriaId: SHOPS.fruA, pescaderiaId: SHOPS.pesTomas },
+      }),
+    );
+    expect(friday.orders[0].shops.flatMap((s) => s.items.map((i) => i.productId))).toEqual(["merluza"]);
+    expect(friday.orders[0].deliveryFeeCents).toBe(0);
+  });
+
+  it("2 veces por semana: si la cesta de ese día está vacía, no hay pedido", () => {
+    const plan = planOrdersForDay(
+      baseInput({ customers: [twiceWeekly], basket: [{ customerId: "doble", productId: "naranjas", quantity: 1, slot: 5 }] }),
+    );
+    expect(plan.orders).toEqual([]);
+    expect(plan.skippedCustomers).toEqual([{ customerId: "doble", reason: "cesta_vacia" }]);
+  });
+
+  it("pago por envío: solo hay pedido si lo ha pedido, y lleva los gastos de envío", () => {
+    const basket = [{ customerId: "suelto", productId: "naranjas", quantity: 2 }];
+    const notRequested = planOrdersForDay(baseInput({ customers: [perDelivery(false)], basket, deliveryFeeCents: 600 }));
+    expect(notRequested.orders).toEqual([]);
+    expect(notRequested.skippedCustomers).toEqual([]);
+
+    const requested = planOrdersForDay(baseInput({ customers: [perDelivery(true)], basket, deliveryFeeCents: 600 }));
+    expect(requested.orders).toHaveLength(1);
+    expect(requested.orders[0]).toMatchObject({ estimatedTotalCents: 320, deliveryFeeCents: 600 });
+  });
+
+  it("pago por envío: el pedido mínimo cuenta solo los productos", () => {
+    const basket = [{ customerId: "suelto", productId: "naranjas", quantity: 2 }]; // 3,20 €
+    const plan = planOrdersForDay(
+      baseInput({ customers: [perDelivery(true)], basket, deliveryFeeCents: 600, minOrderCents: 500 }),
+    );
+    expect(plan.skippedCustomers).toEqual([{ customerId: "suelto", reason: "pedido_minimo", totalCents: 320 }]);
+  });
+
+  it("los planes con cuota no pagan envío", () => {
+    const plan = planOrdersForDay(
+      baseInput({ basket: [{ customerId: "c1", productId: "naranjas", quantity: 1 }], deliveryFeeCents: 600 }),
+    );
+    expect(plan.orders[0].deliveryFeeCents).toBe(0);
+  });
+
+  it("un pago por envío pausado o cancelado no recibe nada aunque lo pidiera", () => {
+    const cancelled = customer("suelto", {
+      subscription: { status: "cancelada", frequency: "por_envio", deliveryWeekday: 2, anchorDate: "2026-10-20" },
+      requestedDelivery: true,
+    });
+    const plan = planOrdersForDay(
+      baseInput({ customers: [cancelled], basket: [{ customerId: "suelto", productId: "naranjas", quantity: 1 }] }),
+    );
+    expect(plan.orders).toEqual([]);
+  });
+});
+
 describe("importe final con el peso real", () => {
   it("usa la cantidad real cuando la tienda la indica", () => {
     expect(

@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { parseEurosToCents } from "@/lib/domain/money";
 import type { ProductCategory, ShopType } from "@/lib/domain/orders";
 import type { Product, Shop } from "@/lib/types";
 
@@ -43,12 +44,9 @@ export async function getProducts(
   return data as Product[];
 }
 
-/** "3,50" o "3.5" → 350 céntimos. Devuelve null si no es un precio válido. */
+/** "3,50" o "3.5" → 350 céntimos. Devuelve null si no es un precio válido (mayor que cero). */
 export function parsePriceCents(input: string): number | null {
-  const normalized = input.trim().replace(/\s|€/g, "").replace(",", ".");
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
-  const cents = Math.round(Number(normalized) * 100);
-  return cents > 0 && cents < 1_000_000 ? cents : null;
+  return parseEurosToCents(input);
 }
 
 export function centsToInput(cents: number): string {

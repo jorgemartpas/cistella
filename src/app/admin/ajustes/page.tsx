@@ -6,7 +6,8 @@ import { BackLink } from "@/components/back-link";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Field, Input, PageHeader, PageSkeleton } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
-import { centsToInput, parsePriceCents } from "@/lib/catalog";
+import { centsToInput } from "@/lib/catalog";
+import { parseEurosToCents } from "@/lib/domain/money";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState, Settings } from "@/lib/types";
 
@@ -32,19 +33,21 @@ async function saveSettings(_: ActionState, formData: FormData): Promise<ActionS
     default_commission_pct: String(raw.default_commission_pct ?? "").replace(",", "."),
   });
   if (!parsed.success) return { error: "Revisa los valores: hay alguno que no es válido." };
-  const minOrder = parsed.data.min_order.trim() === "" || parsed.data.min_order.trim() === "0"
-    ? 0
-    : parsePriceCents(parsed.data.min_order);
-  const prices = {
-    price_dos_por_semana_cents: parsePriceCents(parsed.data.price_dos_por_semana),
-    price_semanal_cents: parsePriceCents(parsed.data.price_semanal),
-    price_quincenal_cents: parsePriceCents(parsed.data.price_quincenal),
-    delivery_fee_cents: parsePriceCents(parsed.data.delivery_fee),
-  };
-  const postalCodes = parsed.data.allowed_postal_codes.split(/[\s,]+/).filter(Boolean);
-  if (minOrder === null || Object.values(prices).some((p) => p === null)) {
-    return { error: "Escribe los importes así: 15,00" };
+  // [columna, nombre de la casilla, valor, ¿admite 0?]
+  const amountFields = [
+    ["min_order_cents", "Pedido mínimo", parsed.data.min_order.trim() || "0", true],
+    ["price_dos_por_semana_cents", "2 veces por semana", parsed.data.price_dos_por_semana, false],
+    ["price_semanal_cents", "Cada semana", parsed.data.price_semanal, false],
+    ["price_quincenal_cents", "Cada 2 semanas", parsed.data.price_quincenal, false],
+    ["delivery_fee_cents", "Pago por envío", parsed.data.delivery_fee, true],
+  ] as const;
+  const amounts: Record<string, number> = {};
+  for (const [column, label, value, allowZero] of amountFields) {
+    const cents = parseEurosToCents(value, { allowZero });
+    if (cents === null) return { error: `Revisa «${label}»: escribe el importe así: 15,00` };
+    amounts[column] = cents;
   }
+  const postalCodes = parsed.data.allowed_postal_codes.split(/[\s,]+/).filter(Boolean);
   if (postalCodes.length === 0 || postalCodes.some((cp) => !/^\d{5}$/.test(cp))) {
     return { error: "Los códigos postales tienen que ser de 5 cifras, separados por comas." };
   }
@@ -52,11 +55,10 @@ async function saveSettings(_: ActionState, formData: FormData): Promise<ActionS
   const { error } = await supabase
     .from("settings")
     .update({
-      min_order_cents: minOrder,
+      ...amounts,
       allowed_postal_codes: postalCodes,
       default_commission_pct: parsed.data.default_commission_pct,
       weeks_ahead: parsed.data.weeks_ahead,
-      ...prices,
     })
     .eq("id", true);
   if (error) return { error: "No se han podido guardar los ajustes." };

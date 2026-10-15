@@ -20,7 +20,12 @@ export const env = {
     return normalizeKey(required("SUPABASE_SERVICE_ROLE_KEY"));
   },
   get siteUrl() {
-    return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").trim().replace(/\/+$/, "");
+    const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    if (explicit) return explicit.replace(/\/+$/, "");
+    // En Vercel no hace falta definirla: se usa la dirección de producción del proyecto
+    const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+    if (vercel) return `https://${vercel}`;
+    return "http://localhost:3000";
   },
   get cronSecret() {
     return process.env.CRON_SECRET?.trim() || null;

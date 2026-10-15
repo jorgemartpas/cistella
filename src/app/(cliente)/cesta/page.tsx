@@ -186,15 +186,13 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
             </div>
 
             {!ctx.isGuest && (
-              <details className="card-surface group p-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-                  <span className="flex items-center gap-2">
-                    <Icon name="bookmark" className="size-5 text-primary" /> Guardar esta cesta
-                  </span>
-                  <Icon name="down" className="size-4 transition-transform group-open:rotate-180" />
-                </summary>
-                <p className="mb-3 mt-2 text-sm text-muted">
-                  Para volver a usarla otro día (por ejemplo, «Cesta de verano»). La tendrás en Cestas guardadas.
+              <section className="card-surface p-5">
+                <h2 className="flex items-center gap-2 font-bold">
+                  <Icon name="bookmark" className="size-5 text-primary" /> Crear cesta guardada
+                </h2>
+                <p className="mb-3 mt-1 text-sm text-muted">
+                  Guarda esta cesta para repetirla otro día o para el envío automático (por ejemplo, «Semana normal»).
+                  La tendrás en Cestas.
                 </p>
                 <ActionForm action={saveBasket}>
                   <input type="hidden" name="slot" value={ctx.slot} />
@@ -205,11 +203,11 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
                     maxLength={60}
                     required
                   />
-                  <SubmitButton variant="outline" className="w-full" pendingText="Guardando…">
-                    Guardar
+                  <SubmitButton variant="outline" className="w-full" pendingText="Creando…">
+                    Crear cesta
                   </SubmitButton>
                 </ActionForm>
-              </details>
+              </section>
             )}
           </aside>
         </div>

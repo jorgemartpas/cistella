@@ -9,7 +9,7 @@ import { cx } from "../ui";
 
 const SECTIONS = [
   { href: "/categorias", label: "Categorías" },
-  { href: "/cestas-guardadas", label: "Cestas guardadas" },
+  { href: "/cestas-guardadas", label: "Cestas" },
 ];
 
 /** Enlaces de la cabecera, con la raya verde debajo del que está activo. */

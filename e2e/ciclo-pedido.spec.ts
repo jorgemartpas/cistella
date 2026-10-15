@@ -115,10 +115,9 @@ test("envío automático: el reparto se prepara sin confirmar y la cesta vuelve 
 
   // Guarda su cesta y activa el envío automático con ella
   await lucia.goto("/cesta");
-  await main(lucia).getByText("Guardar esta cesta").click();
   await main(lucia).getByLabel("Nombre de la cesta").fill(basketName);
-  await main(lucia).getByRole("button", { name: "Guardar", exact: true }).click();
-  await expect(main(lucia).getByText(/Guardada como/)).toBeVisible();
+  await main(lucia).getByRole("button", { name: "Crear cesta", exact: true }).click();
+  await expect(main(lucia).getByText(/creada\. La tienes en Cestas/)).toBeVisible();
   await lucia.goto("/cestas-guardadas");
   await main(lucia).getByRole("link", { name: new RegExp(basketName) }).click();
   await main(lucia).getByRole("button", { name: "Activar envío automático con esta cesta" }).click();

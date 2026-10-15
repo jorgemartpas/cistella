@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ActionForm, SubmitButton } from "@/components/forms";
 import { Icon } from "@/components/icons";
 import { ApplyListButton } from "@/components/store/apply-list-button";
 import { ProductGrid } from "@/components/store/product-grid";
 import { Tabs } from "@/components/store/tabs";
-import { Badge, EmptyState, Input, PageSkeleton } from "@/components/ui";
-import { createSavedBasketForm } from "@/lib/actions/lists";
+import { Badge, EmptyState, PageSkeleton } from "@/components/ui";
 import { getCustomerContext, getUsualProductIds } from "@/lib/client-context";
 import { formatEuros, lineTotalCents, type ProductUnit } from "@/lib/domain/money";
 import { WEEKDAY_NAMES } from "@/lib/domain/schedule";
@@ -82,7 +80,7 @@ async function SavedBaskets() {
 
       {baskets.length === 0 ? (
         <EmptyState icon="🧺" title="Aún no tienes cestas guardadas">
-          En Mi cesta, pulsa «Guardar esta cesta», o guarda productos con el marcador de su foto.
+          Créala desde Mi cesta («Crear cesta guardada»), o guarda productos con el marcador de su foto.
         </EmptyState>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -128,16 +126,6 @@ async function SavedBaskets() {
         </ul>
       )}
 
-      <div className="card-surface mx-auto max-w-md p-5">
-        <h2 className="mb-1 font-bold">Nueva cesta</h2>
-        <p className="mb-3 text-sm text-muted">Créala vacía y añade productos con el marcador de su foto.</p>
-        <ActionForm action={createSavedBasketForm}>
-          <Input name="name" placeholder="Nombre de la cesta" aria-label="Nombre de la cesta" maxLength={60} required />
-          <SubmitButton variant="outline" className="w-full" pendingText="Creando…">
-            Crear cesta
-          </SubmitButton>
-        </ActionForm>
-      </div>
     </div>
   );
 }
@@ -151,8 +139,8 @@ function AutoDeliveryExplainer({ autoName, perDelivery }: { autoName: string | n
           <Icon name="bookmark" className="size-5 text-primary" /> Guarda tus cestas
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Guarda la cesta que más repites («Semana normal», «Barbacoa»…) desde Mi cesta, o ve añadiendo productos con
-          el marcador de su foto. Después la usas de un toque.
+          Crea la cesta que más repites («Semana normal», «Barbacoa»…) desde Mi cesta, o ve añadiendo productos con el
+          marcador de su foto. Después la usas de un toque.
         </p>
       </div>
       <div>

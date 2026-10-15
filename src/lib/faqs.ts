@@ -40,7 +40,7 @@ export const CUSTOMER_FAQS: Faq[] = [
   },
   {
     q: "¿Qué son las cestas guardadas?",
-    a: "Cestas que guardas para repetirlas: desde Mi cesta («Guardar esta cesta») o añadiendo productos con el marcador de su foto. Con «Usar esta cesta» tu cesta pasa a ser esa; con «Añadir a mi cesta», se suman los productos que te falten.",
+    a: "Cestas que guardas para repetirlas: desde Mi cesta («Crear cesta guardada») o añadiendo productos con el marcador de su foto. Con «Usar esta cesta» tu cesta pasa a ser esa; con «Añadir a mi cesta», se suman los productos que te falten.",
   },
   {
     q: "¿Qué es el envío automático?",

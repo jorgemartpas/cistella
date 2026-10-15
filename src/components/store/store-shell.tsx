@@ -11,7 +11,7 @@ import { StoreNav, StoreNavLinks, UserMenu } from "./header-parts";
 const MOBILE_NAV: NavItem[] = [
   { href: "/", label: "Inicio", icon: "home", exact: true },
   { href: "/categorias", label: "Categorías", icon: "grid" },
-  { href: "/cestas-guardadas", label: "Guardadas", icon: "bookmark" },
+  { href: "/cestas-guardadas", label: "Cestas", icon: "bookmark" },
   { href: "/pedidos", label: "Pedidos", icon: "list" },
   { href: "/cuenta", label: "Cuenta", icon: "user" },
 ];

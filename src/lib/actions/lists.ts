@@ -44,13 +44,6 @@ export async function createSavedBasket(name: string, productId?: string): Promi
   return { id: list.id };
 }
 
-/** Formulario «Nueva cesta» de Cestas guardadas. */
-export async function createSavedBasketForm(_: ActionState, formData: FormData): Promise<ActionState> {
-  const result = await createSavedBasket(String(formData.get("name") ?? ""));
-  if (result.error) return { error: result.error };
-  redirect(`/cestas-guardadas/${result.id}`);
-}
-
 /** Guarda la cesta que se está llenando como cesta guardada, con sus cantidades. */
 export async function saveBasket(_: ActionState, formData: FormData): Promise<ActionState> {
   const profile = await requireRole("cliente");
@@ -79,7 +72,7 @@ export async function saveBasket(_: ActionState, formData: FormData): Promise<Ac
     return { error: "No se ha podido guardar la cesta." };
   }
   refresh();
-  return { ok: `Guardada como «${parsed.data}». La tienes en Cestas guardadas.` };
+  return { ok: `Cesta «${parsed.data}» creada. La tienes en Cestas.` };
 }
 
 /** Marcador de un producto: lo añade a una cesta guardada (con su cantidad) o lo quita. */

@@ -3,6 +3,7 @@ import { AppShell, type NavItem } from "@/components/app-shell";
 const nav: NavItem[] = [
   { href: "/tienda", label: "Pedidos", icon: "list", exact: true },
   { href: "/tienda/productos", label: "Productos", icon: "box" },
+  { href: "/tienda/inventario", label: "Inventario", icon: "stock" },
   { href: "/tienda/ventas", label: "Ganancias", icon: "chart" },
 ];
 

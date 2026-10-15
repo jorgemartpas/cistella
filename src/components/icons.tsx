@@ -2,6 +2,13 @@ import type { ReactNode } from "react";
 
 // Iconos de trazo (basados en Lucide, licencia ISC)
 const paths = {
+  stock: (
+    <>
+      <rect x="3" y="12" width="8" height="8" rx="1" />
+      <rect x="13" y="12" width="8" height="8" rx="1" />
+      <rect x="8" y="3" width="8" height="8" rx="1" />
+    </>
+  ),
   home: (
     <>
       <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />

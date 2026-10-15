@@ -7,7 +7,7 @@ import { ActionForm, SubmitButton } from "@/components/forms";
 import { Field, Input, PageHeader, PageSkeleton } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { centsToInput } from "@/lib/catalog";
-import { parseEurosToCents } from "@/lib/domain/money";
+import { parseEurosToCents, parseQuantity } from "@/lib/domain/money";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState, Settings } from "@/lib/types";
 
@@ -22,6 +22,7 @@ const settingsSchema = z.object({
   price_semanal: z.string(),
   price_quincenal: z.string(),
   delivery_fee: z.string(),
+  inventory_margin: z.string(),
 });
 
 async function saveSettings(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -47,6 +48,8 @@ async function saveSettings(_: ActionState, formData: FormData): Promise<ActionS
     if (cents === null) return { error: `Revisa «${label}»: escribe el importe así: 15,00` };
     amounts[column] = cents;
   }
+  const margin = parseQuantity(parsed.data.inventory_margin.trim() || "0");
+  if (margin === null || margin > 1000) return { error: "Revisa «Margen del inventario»: escribe los kilos así: 5 o 2,5" };
   const postalCodes = parsed.data.allowed_postal_codes.split(/[\s,]+/).filter(Boolean);
   if (postalCodes.length === 0 || postalCodes.some((cp) => !/^\d{5}$/.test(cp))) {
     return { error: "Los códigos postales tienen que ser de 5 cifras, separados por comas." };
@@ -59,6 +62,7 @@ async function saveSettings(_: ActionState, formData: FormData): Promise<ActionS
       allowed_postal_codes: postalCodes,
       default_commission_pct: parsed.data.default_commission_pct,
       weeks_ahead: parsed.data.weeks_ahead,
+      inventory_margin_kg: Math.round(margin * 100) / 100,
     })
     .eq("id", true);
   if (error) return { error: "No se han podido guardar los ajustes." };
@@ -93,6 +97,16 @@ async function SettingsForm() {
       </Field>
       <Field label="Comisión por defecto para tiendas nuevas (%)" hint="Cada tienda tiene la suya en su ficha.">
         <Input name="default_commission_pct" inputMode="decimal" defaultValue={String(settings.default_commission_pct).replace(".", ",")} />
+      </Field>
+      <Field
+        label="Margen del inventario de las tiendas (kg)"
+        hint="Si lo pedido pasa de lo que tiene una tienda, sale en naranja hasta estos kilos de más y en rojo si los supera. Solo en lo que va al peso."
+      >
+        <Input
+          name="inventory_margin"
+          inputMode="decimal"
+          defaultValue={String(settings.inventory_margin_kg).replace(".", ",")}
+        />
       </Field>
       <Field label="Semanas de repartos programados por adelantado">
         <Input name="weeks_ahead" type="number" min={1} max={12} defaultValue={settings.weeks_ahead} />

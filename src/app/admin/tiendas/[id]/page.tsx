@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BackLink } from "@/components/back-link";
+import { InventoryView } from "@/components/inventory-view";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Card, Field, Input, PageHeader, PageSkeleton, SectionTitle } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { SHOP_TYPE_LABELS } from "@/lib/domain/orders";
+import { getShopInventory } from "@/lib/inventory";
 import { createClient } from "@/lib/supabase/server";
 import type { Shop } from "@/lib/types";
 import { createShopAccount, resetShopPassword, saveShop } from "../actions";
@@ -71,6 +73,16 @@ async function ShopEditor({ params }: Pick<PageProps<"/admin/tiendas/[id]">, "pa
           </ActionForm>
         )}
       </Card>
+
+      <SectionTitle>Inventario</SectionTitle>
+      <Suspense fallback={<PageSkeleton />}>
+        <ShopInventorySection shopId={shop.id} />
+      </Suspense>
     </>
   );
+}
+
+async function ShopInventorySection({ shopId }: { shopId: string }) {
+  const data = await getShopInventory(shopId);
+  return data ? <InventoryView data={data} forAdmin /> : null;
 }

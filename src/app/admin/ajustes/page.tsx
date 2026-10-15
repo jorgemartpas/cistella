@@ -97,7 +97,7 @@ async function SettingsForm() {
       <Field label="Semanas de repartos programados por adelantado">
         <Input name="weeks_ahead" type="number" min={1} max={12} defaultValue={settings.weeks_ahead} />
       </Field>
-      <fieldset className="space-y-3 rounded-2xl border border-border p-4">
+      <fieldset className="space-y-3 rounded-lg border border-border p-4">
         <legend className="px-1 text-sm font-semibold">Precios de los planes (IVA incluido)</legend>
         <div className="grid grid-cols-2 gap-3">
           <Field label="2 veces por semana (€/mes)">

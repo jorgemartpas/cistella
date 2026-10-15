@@ -13,7 +13,7 @@ export default function OfflinePage() {
         dejaste.
       </p>
       {/* Recarga completa (no navegación de cliente) para salir de la página guardada sin conexión */}
-      <a href="/inicio" className="mt-6 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-ink">
+      <a href="/inicio" className="mt-6 rounded-lg bg-primary px-6 py-3 font-semibold text-primary-ink">
         Reintentar
       </a>
     </main>

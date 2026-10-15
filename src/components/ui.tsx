@@ -6,13 +6,14 @@ export function cx(...classes: (string | false | null | undefined)[]) {
 }
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none min-h-12";
+  "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none min-h-12";
 
 export const buttonStyles = {
   primary: cx(buttonBase, "bg-primary text-primary-ink hover:bg-primary-hover"),
   secondary: cx(buttonBase, "bg-surface text-text border border-border hover:bg-surface-2"),
   danger: cx(buttonBase, "bg-danger-soft text-danger hover:opacity-90"),
   ghost: cx(buttonBase, "text-primary hover:bg-primary-soft"),
+  outline: cx(buttonBase, "border border-primary bg-surface text-primary hover:bg-primary-soft"),
   small: "inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold min-h-10 transition-colors disabled:opacity-50",
 };
 
@@ -25,7 +26,7 @@ export function ButtonLink({
 }
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cx("rounded-2xl border border-border bg-surface p-4", className)} {...props} />;
+  return <div className={cx("rounded-lg border border-border bg-surface p-4", className)} {...props} />;
 }
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
@@ -69,7 +70,7 @@ export function Badge({ tone = "neutral", children }: { tone?: Tone; children: R
 
 export function Notice({ tone = "info", title, children }: { tone?: Tone; title?: string; children?: ReactNode }) {
   return (
-    <div role="status" className={cx("rounded-xl px-4 py-3 text-sm", toneStyles[tone])}>
+    <div role="status" className={cx("rounded-lg px-4 py-3 text-sm", toneStyles[tone])}>
       {title && <p className="font-semibold">{title}</p>}
       {children && <div className={title ? "mt-1" : undefined}>{children}</div>}
     </div>
@@ -78,18 +79,21 @@ export function Notice({ tone = "info", title, children }: { tone?: Tone; title?
 
 export function EmptyState({ icon, title, children }: { icon: string; title: string; children?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-border px-6 py-10 text-center">
-      <div className="text-4xl" aria-hidden>
+    <div className="mx-auto max-w-sm px-6 py-12 text-center">
+      <div
+        className="mx-auto flex size-28 items-center justify-center rounded-full bg-surface-2 text-6xl"
+        aria-hidden
+      >
         {icon}
       </div>
-      <p className="mt-3 font-semibold">{title}</p>
-      {children && <div className="mt-2 text-sm text-muted">{children}</div>}
+      <p className="mt-5 text-xl font-bold">{title}</p>
+      {children && <div className="mt-2 text-muted">{children}</div>}
     </div>
   );
 }
 
 const inputStyles =
-  "rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder:text-muted/70 focus:border-primary focus:outline-none";
+  "rounded-lg border border-border bg-surface px-3.5 py-3 text-text placeholder:text-muted/70 focus:border-primary focus:outline-none";
 
 /** Ancho completo salvo que se pase otro ancho (w-24, w-auto…) */
 function withWidth(className?: string) {
@@ -130,7 +134,7 @@ export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx("animate-pulse rounded-2xl bg-surface-2", className)} />;
+  return <div className={cx("animate-pulse rounded-lg bg-surface-2", className)} />;
 }
 
 export function PageSkeleton() {

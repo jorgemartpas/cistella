@@ -38,7 +38,7 @@ export function ConfirmOrder({
   return (
     <div id="confirmar" className="mt-3 scroll-mt-20 space-y-2">
       {optimistic ? (
-        <div role="status" className="rounded-xl bg-primary-soft px-4 py-3 text-sm text-primary">
+        <div role="status" className="rounded-lg bg-primary-soft px-4 py-3 text-sm text-primary">
           <p className="flex items-center gap-1.5 text-base font-semibold">
             <Icon name="check" className="size-5" /> Pedido confirmado para el {dayLabel}
           </p>

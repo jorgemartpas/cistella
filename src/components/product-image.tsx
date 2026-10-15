@@ -25,14 +25,14 @@ export function ProductImage({
         src={product.image_url}
         alt=""
         loading="lazy"
-        className={cx("shrink-0 rounded-xl object-cover bg-surface-2", className)}
+        className={cx("shrink-0 rounded-lg object-cover bg-surface-2", className)}
       />
     );
   }
   return (
     <div
       aria-hidden
-      className={cx("flex shrink-0 items-center justify-center rounded-xl text-3xl", BACKGROUNDS[product.category], className)}
+      className={cx("flex shrink-0 items-center justify-center rounded-lg text-3xl", BACKGROUNDS[product.category], className)}
     >
       {ICONS[product.category]}
     </div>

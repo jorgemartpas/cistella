@@ -40,7 +40,7 @@ export function ShopFields({ shop, defaultCommission }: { shop?: Shop; defaultCo
       <Field label="Dirección (opcional)" hint="Para la ruta de recogidas">
         <Input name="address" defaultValue={shop?.address ?? ""} />
       </Field>
-      <label className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+      <label className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
         <input type="checkbox" name="active" defaultChecked={shop?.active ?? true} className="size-5 accent-[var(--primary)]" />
         <span>
           <span className="block font-medium">Activa</span>

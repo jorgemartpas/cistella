@@ -42,7 +42,7 @@ export function FormMessage({ state }: { state: ActionState }) {
     <p
       role={state.error ? "alert" : "status"}
       className={cx(
-        "rounded-xl px-4 py-3 text-sm",
+        "rounded-lg px-4 py-3 text-sm",
         state.error ? "bg-danger-soft text-danger" : "bg-primary-soft text-primary",
       )}
     >

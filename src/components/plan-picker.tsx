@@ -20,7 +20,7 @@ function listDays(weekdays: number[]) {
 }
 
 const radioCard =
-  "flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 has-[:checked]:border-primary has-[:checked]:bg-primary-soft";
+  "flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 has-[:checked]:border-primary has-[:checked]:bg-primary-soft";
 
 /** Elección de plan (con su precio) y, si el plan lo necesita, del día de reparto. */
 export function PlanPicker({

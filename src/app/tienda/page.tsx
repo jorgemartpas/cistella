@@ -95,7 +95,7 @@ async function ShopOrders({ searchParams }: Pick<PageProps<"/tienda">, "searchPa
                       scroll={false}
                       aria-current={d.id === selected.id ? "page" : undefined}
                       className={cx(
-                        "inline-flex flex-col whitespace-nowrap rounded-xl px-4 py-2 text-sm",
+                        "inline-flex flex-col whitespace-nowrap rounded-lg px-4 py-2 text-sm",
                         d.id === selected.id ? "bg-text text-bg" : "border border-border bg-surface",
                       )}
                     >

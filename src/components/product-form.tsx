@@ -63,7 +63,7 @@ export function ProductForm({
           </Select>
         </Field>
       </div>
-      <label className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+      <label className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
         <input
           type="checkbox"
           name="active"

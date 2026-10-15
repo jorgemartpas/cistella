@@ -118,7 +118,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
               scroll={false}
               aria-current={w === slot ? "page" : undefined}
               className={cx(
-                "rounded-xl px-3 py-2.5 text-center text-sm font-semibold",
+                "rounded-lg px-3 py-2.5 text-center text-sm font-semibold",
                 w === slot ? "bg-primary text-primary-ink" : "border border-border bg-surface",
               )}
             >
@@ -291,7 +291,7 @@ function RequestBanner({
       {days.length === 0 ? (
         <p className="mt-3 text-sm">Ahora mismo no hay repartos abiertos.</p>
       ) : (
-        <ul className="mt-3 divide-y divide-border rounded-xl bg-surface">
+        <ul className="mt-3 divide-y divide-border rounded-lg bg-surface">
           {days.map(({ day, requested }) => (
             <li key={day.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
               <div>

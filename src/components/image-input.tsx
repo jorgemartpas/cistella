@@ -28,9 +28,9 @@ export function ImageInput({ name, currentUrl }: { name: string; currentUrl: str
     <div className="flex items-center gap-4">
       {preview ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="Foto del producto" className="size-20 rounded-xl object-cover bg-surface-2" />
+        <img src={preview} alt="Foto del producto" className="size-20 rounded-lg object-cover bg-surface-2" />
       ) : (
-        <div className="flex size-20 items-center justify-center rounded-xl bg-surface-2 text-xs text-muted">Sin foto</div>
+        <div className="flex size-20 items-center justify-center rounded-lg bg-surface-2 text-xs text-muted">Sin foto</div>
       )}
       <label className="cursor-pointer rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold hover:bg-surface-2">
         {busy ? "Preparando…" : preview ? "Cambiar foto" : "Añadir foto"}

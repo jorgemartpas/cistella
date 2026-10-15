@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AppShell, type NavItem } from "@/components/app-shell";
+import { ChatHeaderLink } from "@/components/chat/chat-header-link";
 import { ReviewBell } from "@/components/review-bell";
 
 const nav: NavItem[] = [
@@ -12,6 +13,7 @@ const nav: NavItem[] = [
 
 // Solo en el menú lateral y en el de «Hola …» (en el móvil se llega desde el inicio)
 const more: NavItem[] = [
+  { href: "/admin/mensajes", label: "Mensajes", icon: "chat" },
   { href: "/admin/revisiones", label: "Revisiones", icon: "bell" },
   { href: "/admin/clientes", label: "Clientes", icon: "users" },
   { href: "/admin/ventas", label: "Ventas", icon: "chart" },
@@ -26,6 +28,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
       badge="Admin"
       actions={
         <Suspense fallback={null}>
+          <ChatHeaderLink />
           <ReviewBell />
         </Suspense>
       }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 // Iconos de trazo (basados en Lucide, licencia ISC)
 const paths = {
+  chat: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
   bell: (
     <>
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />

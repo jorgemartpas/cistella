@@ -312,23 +312,24 @@ describe("tienda", () => {
     expect(data!.status).toBe("pendiente");
   });
 
-  it("la carnicería gestiona sus productos y no los de otra", async () => {
-    const { data: created, error } = await oskinez
+  it("la carnicería no cambia productos directamente: solo disponible o agotado (y nunca los de otra)", async () => {
+    const created = await oskinez
       .from("products")
-      .insert({ shop_id: SHOP.oskinez, category: "carne", name: "Producto de prueba RLS", price_cents: 100, unit: "kg" })
-      .select("id")
-      .single();
-    expect(error).toBeNull();
-    await service.from("products").delete().eq("id", created!.id);
+      .insert({ shop_id: SHOP.oskinez, category: "carne", name: "Producto de prueba RLS", price_cents: 100, unit: "kg" });
+    expect(created.error?.code).toBe("42501");
 
-    const { error: otherShop } = await oskinez
-      .from("products")
-      .insert({ shop_id: SHOP.reino, category: "carne", name: "Intruso", price_cents: 100, unit: "kg" });
-    expect(otherShop?.code).toBe("42501");
+    const { data: own } = await service.from("products").select("id, price_cents").eq("shop_id", SHOP.oskinez).limit(1).single();
+    const price = await oskinez.from("products").update({ price_cents: 1 }).eq("id", own!.id);
+    expect(price.error?.message).toMatch(/los revisa el equipo de LaCistella/);
+    const soldOut = await oskinez.from("products").update({ active: false }).eq("id", own!.id).select("active").single();
+    expect(soldOut.data?.active).toBe(false);
+    await oskinez.from("products").update({ active: true }).eq("id", own!.id);
+    expect((await oskinez.from("products").delete().eq("id", own!.id).select("id")).data).toEqual([]);
+
     const { data: reinoProduct } = await service.from("products").select("id, price_cents").eq("shop_id", SHOP.reino).limit(1).single();
-    await oskinez.from("products").update({ price_cents: 1 }).eq("id", reinoProduct!.id);
-    const { data: after } = await service.from("products").select("price_cents").eq("id", reinoProduct!.id).single();
-    expect(after!.price_cents).toBe(reinoProduct!.price_cents);
+    await oskinez.from("products").update({ active: false }).eq("id", reinoProduct!.id);
+    const { data: after } = await service.from("products").select("active").eq("id", reinoProduct!.id).single();
+    expect(after!.active).toBe(true);
   });
 
   it("solo el admin marca productos de temporada (las carnicerías no, ni con los suyos)", async () => {
@@ -343,14 +344,14 @@ describe("tienda", () => {
     const created = await oskinez
       .from("products")
       .insert({ shop_id: SHOP.oskinez, category: "carne", name: "Temporada RLS", price_cents: 100, unit: "kg", seasonal: true });
-    expect(created.error?.message).toMatch(/Solo el equipo de Cistella/);
-    // Puede seguir editando su producto sin tocar la temporada
-    const edit = await oskinez.from("products").update({ description: "Casero" }).eq("id", own!.id);
+    expect(created.error).not.toBeNull();
+    // Puede seguir marcándolo como agotado o disponible
+    const edit = await oskinez.from("products").update({ active: true }).eq("id", own!.id);
     expect(edit.error).toBeNull();
 
     const byAdmin = await admin.from("products").update({ seasonal: true }).eq("id", own!.id).select("seasonal").single();
     expect(byAdmin.data?.seasonal).toBe(true);
-    await service.from("products").update({ seasonal: false, description: own!.description }).eq("id", own!.id);
+    await service.from("products").update({ seasonal: false }).eq("id", own!.id);
   });
 
   it("la frutería no crea productos y solo marca su propia disponibilidad", async () => {
@@ -473,5 +474,101 @@ describe("inventario de las tiendas", () => {
     await service.from("shop_inventory").update({ quantity: 1 }).eq("shop_id", SHOP.oskinez).eq("product_id", longanizaId);
     await admin.from("shop_orders").update({ status: "recogido" }).eq("id", partId);
     expect(await stock()).toBe(0);
+  });
+});
+
+describe("revisión de los cambios de las tiendas", () => {
+  const made: string[] = [];
+  let oskinezProduct: { id: string; price_cents: number; name: string };
+  let naranjas: { id: string; price_cents: number };
+
+  beforeAll(async () => {
+    oskinezProduct = (await service.from("products").select("id, price_cents, name").eq("shop_id", SHOP.oskinez).limit(1).single()).data!;
+    naranjas = (await service.from("products").select("id, price_cents").eq("name", "Naranjas de zumo").single()).data!;
+  });
+
+  afterAll(async () => {
+    await service.from("product_changes").delete().in("shop_id", [SHOP.oskinez, SHOP.fruteriaA]);
+    await service.from("products").update({ price_cents: oskinezProduct.price_cents }).eq("id", oskinezProduct.id);
+    if (made.length) await service.from("products").delete().in("id", made);
+  });
+
+  const editOf = (shopId: string, productId: string, category: string, price: number) => ({
+    shop_id: shopId,
+    kind: "editar",
+    product_id: productId,
+    category,
+    name: "Propuesta RLS",
+    unit: "kg",
+    price_cents: price,
+  });
+
+  it("cada tienda propone cambios solo en lo suyo: la carnicería en sus productos, la frutería en el catálogo de fruta y verdura", async () => {
+    const own = await oskinez.from("product_changes").insert(editOf(SHOP.oskinez, oskinezProduct.id, "carne", 1999)).select("id").single();
+    expect(own.error).toBeNull();
+    const { data: reino } = await service.from("products").select("id").eq("shop_id", SHOP.reino).limit(1).single();
+    expect((await oskinez.from("product_changes").insert(editOf(SHOP.oskinez, reino!.id, "carne", 100))).error?.code).toBe("42501");
+    expect((await oskinez.from("product_changes").insert(editOf(SHOP.oskinez, naranjas.id, "fruta", 100))).error?.code).toBe("42501");
+
+    expect((await fruteriaA.from("product_changes").insert(editOf(SHOP.fruteriaA, naranjas.id, "fruta", 199))).error).toBeNull();
+    const fish = await fruteriaA
+      .from("product_changes")
+      .insert({ shop_id: SHOP.fruteriaA, kind: "crear", category: "pescado", name: "Atún", unit: "kg", price_cents: 1500 });
+    expect(fish.error?.code).toBe("42501");
+    // No puede proponer en nombre de otra tienda ni marcarlo ya como aprobado
+    expect((await fruteriaA.from("product_changes").insert({ ...editOf(SHOP.oskinez, oskinezProduct.id, "carne", 1), shop_id: SHOP.oskinez })).error?.code).toBe("42501");
+    const approved = await fruteriaA
+      .from("product_changes")
+      .insert({ shop_id: SHOP.fruteriaA, kind: "crear", category: "fruta", name: "Caqui", unit: "kg", price_cents: 300, status: "aprobado" });
+    expect(approved.error?.code).toBe("42501");
+  });
+
+  it("solo la tienda y el admin ven sus cambios; la tienda no se los puede aprobar", async () => {
+    expect((await fruteriaA.from("product_changes").select("id").eq("shop_id", SHOP.oskinez)).data).toEqual([]);
+    expect((await lucia.from("product_changes").select("id")).data).toEqual([]);
+    expect((await admin.from("product_changes").select("id").eq("status", "pendiente")).data!.length).toBeGreaterThanOrEqual(2);
+    const { data: change } = await service.from("product_changes").select("id").eq("shop_id", SHOP.oskinez).eq("status", "pendiente").single();
+    const self = await oskinez.rpc("review_product_change", { p_change_id: change!.id, p_approve: true });
+    expect(self.error?.message).toMatch(/Solo el equipo de LaCistella/);
+    await oskinez.from("product_changes").update({ status: "aprobado" }).eq("id", change!.id);
+    expect((await service.from("product_changes").select("status").eq("id", change!.id).single()).data!.status).toBe("pendiente");
+  });
+
+  it("el admin acepta (se aplica en la tienda) o rechaza (no cambia nada)", async () => {
+    const { data: carne } = await service.from("product_changes").select("id").eq("shop_id", SHOP.oskinez).eq("status", "pendiente").single();
+    expect((await admin.rpc("review_product_change", { p_change_id: carne!.id, p_approve: true })).error).toBeNull();
+    const applied = (await service.from("products").select("name, price_cents").eq("id", oskinezProduct.id).single()).data!;
+    expect(applied).toEqual({ name: "Propuesta RLS", price_cents: 1999 });
+    await service.from("products").update({ name: oskinezProduct.name }).eq("id", oskinezProduct.id);
+
+    const { data: fruta } = await service.from("product_changes").select("id").eq("shop_id", SHOP.fruteriaA).eq("status", "pendiente").single();
+    expect((await admin.rpc("review_product_change", { p_change_id: fruta!.id, p_approve: false, p_note: "Ese precio no" })).error).toBeNull();
+    expect((await service.from("products").select("price_cents").eq("id", naranjas.id).single()).data!.price_cents).toBe(naranjas.price_cents);
+    const rejected = (await fruteriaA.from("product_changes").select("status, review_note").eq("id", fruta!.id).single()).data!;
+    expect(rejected).toEqual({ status: "rechazado", review_note: "Ese precio no" });
+    expect((await admin.rpc("review_product_change", { p_change_id: fruta!.id, p_approve: true })).error?.message).toMatch(/ya está revisado/);
+  });
+
+  it("un producto nuevo del catálogo común queda marcado para la tienda que lo propuso; eliminar también se revisa", async () => {
+    const { data: proposal } = await fruteriaA
+      .from("product_changes")
+      .insert({ shop_id: SHOP.fruteriaA, kind: "crear", category: "fruta", name: "Caqui persimon RLS", unit: "kg", price_cents: 280 })
+      .select("id")
+      .single();
+    const { data: productId } = await admin.rpc("review_product_change", { p_change_id: proposal!.id, p_approve: true });
+    made.push(productId as string);
+    const product = (await service.from("products").select("shop_id, category, active").eq("id", productId).single()).data!;
+    expect(product).toEqual({ shop_id: null, category: "fruta", active: true });
+    const availability = await service.from("shop_availability").select("available").eq("shop_id", SHOP.fruteriaA).eq("product_id", productId).single();
+    expect(availability.data!.available).toBe(true);
+
+    const { data: removal } = await fruteriaA
+      .from("product_changes")
+      .insert({ shop_id: SHOP.fruteriaA, kind: "eliminar", product_id: productId, category: "fruta" })
+      .select("id")
+      .single();
+    expect((await service.from("products").select("id").eq("id", productId)).data).toHaveLength(1);
+    await admin.rpc("review_product_change", { p_change_id: removal!.id, p_approve: true });
+    expect((await service.from("products").select("id").eq("id", productId)).data).toHaveLength(0);
   });
 });

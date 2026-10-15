@@ -55,19 +55,24 @@ export function seasonHighlight(month: number): SeasonHighlight {
 }
 
 /** Categorías de «Productos de temporada», en el orden de la portada */
-export const SEASONAL_CATEGORIES: ProductCategory[] = ["fruta", "verdura", "pescado"];
+export const SEASONAL_CATEGORIES: ProductCategory[] = ["fruta", "verdura", "pescado", "carne"];
+
+type SeasonalProduct = { category: ProductCategory; seasonal: boolean; active: boolean; name: string };
 
 /**
  * Productos de temporada de la portada: los que el admin ha marcado como «De temporada», separados
- * en fruta, verdura y pescado (por nombre). Las categorías sin ninguno no salen.
+ * por categoría (por nombre). Las categorías sin ninguno no salen.
  */
-export function seasonalGroups<T extends { category: ProductCategory; seasonal: boolean; active: boolean; name: string }>(
-  products: T[],
-): { category: ProductCategory; products: T[] }[] {
+export function seasonalGroups<T extends SeasonalProduct>(products: T[]): { category: ProductCategory; products: T[] }[] {
   return SEASONAL_CATEGORIES.map((category) => ({
     category,
     products: products
       .filter((p) => p.seasonal && p.active && p.category === category)
       .sort((a, b) => a.name.localeCompare(b.name, "es")),
   })).filter((group) => group.products.length > 0);
+}
+
+/** Una categoría en dos partes: primero lo de temporada y después lo de todo el año (sin cambiar el orden). */
+export function splitBySeason<T extends { seasonal: boolean }>(products: T[]): { seasonal: T[]; yearRound: T[] } {
+  return { seasonal: products.filter((p) => p.seasonal), yearRound: products.filter((p) => !p.seasonal) };
 }

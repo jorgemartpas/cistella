@@ -57,7 +57,7 @@ async function StoreHome() {
       <StoreSection title="Productos de temporada" subtitle="Lo mejor de cada época en las tiendas de Alzira">
         <SeasonHero highlight={highlight} href={`/categorias/${highlight.category}`} />
         {seasonal.map(({ category, products }) => {
-          const group = SEASONAL_GROUPS[category as keyof typeof SEASONAL_GROUPS];
+          const group = SEASONAL_GROUPS[category];
           return (
             <div key={category} className="mt-8">
               <div className="mb-3 flex items-end justify-between gap-3">
@@ -90,4 +90,5 @@ const SEASONAL_GROUPS = {
   fruta: { title: "Fruta", link: "Ver toda la fruta" },
   verdura: { title: "Verduras", link: "Ver todas las verduras" },
   pescado: { title: "Pescado", link: "Ver todo el pescado" },
+  carne: { title: "Carne", link: "Ver toda la carne" },
 };

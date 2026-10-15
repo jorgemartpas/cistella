@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seasonalGroups, seasonHighlight } from "./season";
+import { seasonalGroups, seasonHighlight, splitBySeason } from "./season";
 
 describe("destacado de temporada", () => {
   it("cambia con la temporada", () => {
@@ -34,14 +34,31 @@ describe("productos de temporada", () => {
     expect(groups[0].products.map((p) => p.name)).toEqual(["Kakis de la Ribera", "Uva moscatel"]);
   });
 
-  it("deja fuera los no marcados, los retirados, la carne y las categorías sin ninguno", () => {
+  it("deja fuera los no marcados, los retirados y las categorías sin ninguno", () => {
     const groups = seasonalGroups([
       product("Patata", "verdura", false),
       product("Mandarinas", "fruta", true, false),
-      product("Butifarra", "carne"),
       product("Boquerones", "pescado"),
     ]);
     expect(groups).toEqual([{ category: "pescado", products: [product("Boquerones", "pescado")] }]);
+  });
+
+  it("la carne también puede ser de temporada, y va la última", () => {
+    const groups = seasonalGroups([product("Cordero lechal", "carne"), product("Kakis", "fruta")]);
+    expect(groups.map((g) => g.category)).toEqual(["fruta", "carne"]);
+  });
+
+  it("en cada categoría, primero lo de temporada y después lo de todo el año", () => {
+    const products = [
+      { name: "Kakis", seasonal: true },
+      { name: "Manzana", seasonal: false },
+      { name: "Uva", seasonal: true },
+      { name: "Plátano", seasonal: false },
+    ];
+    const { seasonal, yearRound } = splitBySeason(products);
+    expect(seasonal.map((p) => p.name)).toEqual(["Kakis", "Uva"]);
+    expect(yearRound.map((p) => p.name)).toEqual(["Manzana", "Plátano"]);
+    expect(splitBySeason([{ seasonal: false }]).seasonal).toEqual([]);
   });
 
   it("sin productos marcados no hay grupos", () => {

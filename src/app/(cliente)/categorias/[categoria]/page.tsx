@@ -9,6 +9,7 @@ import { EmptyState, PageSkeleton, cx } from "@/components/ui";
 import { CATEGORY_ORDER } from "@/lib/catalog";
 import { getClientContext } from "@/lib/client-context";
 import type { ProductCategory } from "@/lib/domain/orders";
+import { splitBySeason } from "@/lib/domain/season";
 
 export async function generateMetadata({ params }: PageProps<"/categorias/[categoria]">): Promise<Metadata> {
   const { categoria } = await params;
@@ -31,15 +32,18 @@ async function Category({ params }: Pick<PageProps<"/categorias/[categoria]">, "
   const meta = CATEGORY_META[category];
   const products = ctx.products.filter((p) => p.category === category);
   const count = (c: ProductCategory) => ctx.products.filter((p) => p.category === c).length;
+  // Primero lo de temporada (lo marca el admin) y, separado, lo de todo el año
+  const { seasonal, yearRound } = splitBySeason(products);
 
-  // La carne, agrupada por carnicería
+  // La carne de todo el año, agrupada por carnicería
   const groups =
     category === "carne"
       ? ctx.shops
           .filter((s) => s.type === "carniceria" && s.active)
-          .map((s) => ({ title: s.name, products: products.filter((p) => p.shop_id === s.id) }))
+          .map((s) => ({ title: s.name, products: yearRound.filter((p) => p.shop_id === s.id) }))
           .filter((g) => g.products.length > 0)
-      : [{ title: null, products }];
+      : [{ title: null, products: yearRound }];
+  const GroupTitle = seasonal.length > 0 ? "h3" : "h2";
 
   return (
     <div className="md:grid md:grid-cols-[13rem_1fr] md:gap-8">
@@ -73,12 +77,28 @@ async function Category({ params }: Pick<PageProps<"/categorias/[categoria]">, "
         {products.length === 0 ? (
           <EmptyState icon={meta.icon} title={`Ahora mismo no hay ${meta.title.toLowerCase()} a la venta`} />
         ) : (
-          groups.map((group) => (
-            <section key={group.title ?? category} className="mb-8">
-              {group.title && <h2 className="mb-4 text-lg font-bold">{group.title}</h2>}
-              <ProductGrid products={group.products} />
-            </section>
-          ))
+          <>
+            {seasonal.length > 0 && (
+              <section aria-labelledby="de-temporada" className="mb-10">
+                <h2 id="de-temporada" className="mb-1 flex items-center gap-2 text-xl font-extrabold tracking-tight">
+                  <span aria-hidden>🌿</span> De temporada
+                </h2>
+                <p className="mb-4 text-sm text-muted">Lo mejor de ahora, en su momento.</p>
+                <ProductGrid products={seasonal} />
+              </section>
+            )}
+            {yearRound.length > 0 && (
+              <div className={seasonal.length > 0 ? "border-t border-border pt-8" : undefined}>
+                {seasonal.length > 0 && <h2 className="mb-4 text-xl font-extrabold tracking-tight">Todo el año</h2>}
+                {groups.map((group) => (
+                  <section key={group.title ?? category} className="mb-8">
+                    {group.title && <GroupTitle className="mb-4 text-lg font-bold">{group.title}</GroupTitle>}
+                    <ProductGrid products={group.products} />
+                  </section>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

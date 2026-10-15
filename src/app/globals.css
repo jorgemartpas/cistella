@@ -29,36 +29,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111511;
-    --surface: #1a1f1a;
-    --surface-2: #232a23;
-    --text: #ecefe8;
-    --muted: #a2a99e;
-    --border: #2f372f;
-    --primary: #74c285;
-    --primary-hover: #8fd29e;
-    --primary-ink: #0c1a10;
-    --primary-soft: #1d3223;
-    --accent: #f0a35e;
-    --accent-soft: #3a2a1a;
-    --cart: #74c285;
-    --cart-hover: #8fd29e;
-    --cart-ink: #0c1a10;
-    --cart-badge: #0c1a10;
-    --card-ring: #2f372f;
-    --card-shadow: 0 10px 30px -20px rgb(0 0 0 / 0.8);
-    --danger: #f2877d;
-    --danger-soft: #3a1d1a;
-    --warning: #f1c26b;
-    --warning-soft: #362a14;
-    --info: #7cc0ea;
-    --info-soft: #172a37;
-    color-scheme: dark;
-  }
-}
-
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);

@@ -19,10 +19,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f6f5" },
-    { media: "(prefers-color-scheme: dark)", color: "#111511" },
-  ],
+  // La web se ve siempre en claro, aunque el sistema esté en modo oscuro
+  colorScheme: "light",
+  themeColor: "#f4f6f5",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

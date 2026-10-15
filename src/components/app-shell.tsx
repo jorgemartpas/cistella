@@ -7,22 +7,12 @@ import { ActiveNavList, NavList, type NavItem } from "./nav-list";
 export type { NavItem };
 
 /** Estructura de las zonas con sesión: cabecera arriba y navegación inferior tipo app. */
-export function AppShell({
-  nav,
-  homeHref,
-  badge,
-  children,
-}: {
-  nav: NavItem[];
-  homeHref: string;
-  badge?: string;
-  children: ReactNode;
-}) {
+export function AppShell({ nav, badge, children }: { nav: NavItem[]; badge?: string; children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b border-border bg-bg/90 backdrop-blur pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
-          <Logo href={homeHref} />
+          <Logo />
           <div className="flex items-center gap-1">
             {badge && <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">{badge}</span>}
             <form action={signOut}>

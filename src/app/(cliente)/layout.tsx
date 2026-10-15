@@ -8,7 +8,7 @@ const nav: NavItem[] = [
 
 export default function ClienteLayout({ children }: LayoutProps<"/">) {
   return (
-    <AppShell nav={nav} homeHref="/cesta">
+    <AppShell nav={nav}>
       {children}
     </AppShell>
   );

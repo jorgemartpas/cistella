@@ -8,7 +8,7 @@ const nav: NavItem[] = [
 
 export default function TiendaLayout({ children }: LayoutProps<"/tienda">) {
   return (
-    <AppShell nav={nav} homeHref="/tienda" badge="Tienda">
+    <AppShell nav={nav} badge="Tienda">
       {children}
     </AppShell>
   );

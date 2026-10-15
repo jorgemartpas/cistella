@@ -4,6 +4,7 @@ import { Logo } from "@/components/logo";
 import { Badge, ButtonLink, Card } from "@/components/ui";
 import { FREQUENCY_LABELS, PLAN_ORDER, type DeliveryFrequency } from "@/lib/domain/subscription";
 import { DEFAULT_PRICES, planPriceLabel, type PlanPrices } from "@/lib/plans";
+import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const steps = [
@@ -66,9 +67,9 @@ export default function Landing() {
     <div className="min-h-dvh">
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
         <Logo />
-        <Link href="/entrar" className="rounded-lg px-3 py-2 font-semibold text-primary hover:bg-primary-soft">
-          Entrar
-        </Link>
+        <Suspense fallback={<HeaderLink href="/entrar">Entrar</HeaderLink>}>
+          <AccountLink />
+        </Suspense>
       </header>
 
       <main>
@@ -166,6 +167,23 @@ export default function Landing() {
       </footer>
     </div>
   );
+}
+
+function HeaderLink({ href, children }: { href: string; children: string }) {
+  return (
+    <Link href={href} className="rounded-lg px-3 py-2 font-semibold text-primary hover:bg-primary-soft">
+      {children}
+    </Link>
+  );
+}
+
+const ACCOUNT_LABELS = { cliente: "Mi cesta", tienda: "Mi tienda", admin: "Panel" } as const;
+
+/** «Entrar», o el acceso a tu zona si ya has iniciado sesión (/inicio lleva a cada uno a la suya) */
+async function AccountLink() {
+  const profile = await getCurrentProfile();
+  if (!profile) return <HeaderLink href="/entrar">Entrar</HeaderLink>;
+  return <HeaderLink href="/inicio">{ACCOUNT_LABELS[profile.role]}</HeaderLink>;
 }
 
 const PLAN_TEXT: Record<DeliveryFrequency, string> = {

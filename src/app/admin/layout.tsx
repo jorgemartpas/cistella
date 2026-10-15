@@ -10,7 +10,7 @@ const nav: NavItem[] = [
 
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
-    <AppShell nav={nav} homeHref="/admin" badge="Admin">
+    <AppShell nav={nav} badge="Admin">
       {children}
     </AppShell>
   );

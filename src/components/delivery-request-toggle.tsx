@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { setDeliveryRequest } from "@/lib/actions/basket";
+import { confirmDelivery } from "@/lib/actions/basket";
 import { Icon } from "./icons";
 import { cx } from "./ui";
 
@@ -28,7 +28,7 @@ export function DeliveryRequestToggle({
           setError(null);
           startTransition(async () => {
             setOptimistic(!optimistic);
-            const result = await setDeliveryRequest(dayId, !optimistic);
+            const result = await confirmDelivery(dayId, !optimistic);
             if (result.error) setError(result.error);
           });
         }}

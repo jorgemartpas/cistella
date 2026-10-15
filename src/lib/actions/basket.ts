@@ -2,9 +2,9 @@
 
 import { refresh } from "next/cache";
 import { requireRole } from "@/lib/auth";
-import { closingDayFor, getScheduleRules } from "@/lib/delivery";
+import { closingDayFor, getScheduleRules, toCadence } from "@/lib/delivery";
 import { quantityStep, type ProductUnit } from "@/lib/domain/money";
-import { usesDayBaskets } from "@/lib/domain/subscription";
+import { basketSlotFor, isDueOn, usesDayBaskets } from "@/lib/domain/subscription";
 import { createClient } from "@/lib/supabase/server";
 import type { Subscription } from "@/lib/types";
 
@@ -69,24 +69,38 @@ export async function setBasketQuantity(productId: string, quantity: number, slo
   return {};
 }
 
-/** Pago por envío: pide (o anula) un reparto suelto. Solo hasta su hora de cierre. */
-export async function setDeliveryRequest(dayId: string, requested: boolean): Promise<{ error?: string }> {
+/**
+ * Confirma (o anula) un reparto. Sin confirmar, ese día no se prepara nada. En los planes con
+ * cuota solo se confirman los días que tocan; en pago por envío, cualquiera (es pedirlo).
+ * Solo hasta la hora de cierre de ese reparto.
+ */
+export async function confirmDelivery(dayId: string, confirmed: boolean): Promise<{ error?: string }> {
   const profile = await requireRole("cliente");
   const supabase = await createClient();
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("frequency, status")
-    .eq("customer_id", profile.id)
-    .maybeSingle();
-  if (sub?.frequency !== "por_envio" || sub.status !== "activa") {
-    return { error: "Los repartos sueltos son del plan de pago por envío." };
+  const [{ data: sub }, { data: day }] = await Promise.all([
+    supabase.from("subscriptions").select("*").eq("customer_id", profile.id).maybeSingle<Subscription>(),
+    supabase.from("delivery_days").select("id, date").eq("id", dayId).maybeSingle(),
+  ]);
+  if (sub?.status !== "activa") return { error: "Necesitas un plan activo para recibir repartos." };
+  if (!day) return { error: "Ese reparto ya no existe." };
+  if (sub.frequency !== "por_envio" && !isDueOn(toCadence(sub), day.date)) {
+    return { error: "Ese día no te toca reparto con tu plan." };
   }
 
-  const { error } = requested
+  if (confirmed) {
+    const { count } = await supabase
+      .from("basket_items")
+      .select("product_id", { count: "exact", head: true })
+      .eq("customer_id", profile.id)
+      .eq("slot", basketSlotFor(sub.frequency, day.date));
+    if (!count) return { error: "Tu cesta está vacía. Añade algo antes de confirmar." };
+  }
+
+  const { error } = confirmed
     ? await supabase.from("delivery_requests").insert({ customer_id: profile.id, delivery_day_id: dayId })
     : await supabase.from("delivery_requests").delete().eq("customer_id", profile.id).eq("delivery_day_id", dayId);
-  // RLS solo deja pedir o anular repartos abiertos y antes de su cierre
-  if (error && error.code !== "23505") return { error: "Ese reparto ya está cerrado. Elige otro." };
+  // RLS solo deja confirmar o anular repartos abiertos y antes de su cierre
+  if (error && error.code !== "23505") return { error: "Ese reparto ya está cerrado." };
   refresh();
   return {};
 }

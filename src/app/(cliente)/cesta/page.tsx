@@ -71,7 +71,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
     next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
     // Para poder confirmarlo, el día de reparto tiene que existir
     if (next && !next.day) {
-      await ensureDeliveryDays(createServiceClient(), now);
+      await ensureDeliveryDays(createServiceClient(), now, next.date);
       next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
     }
   }

@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { addDays, isoWeekday, madridDate, type ISODate } from "@/lib/domain/dates";
+import { addDays, daysBetween, isoWeekday, madridDate, type ISODate } from "@/lib/domain/dates";
 import { planOrdersForDay, type PlannedOrder, type ProductCategory } from "@/lib/domain/orders";
 import { nextInRotation, rotationQueue } from "@/lib/domain/rotation";
 import { nextOpenDate, nextOpenDateForWeekday, upcomingDeliveryDates, type ScheduleRule } from "@/lib/domain/schedule";
@@ -142,16 +142,18 @@ export async function requestableDays(
 
 /**
  * Crea los días de reparto de las próximas semanas según el calendario y les asigna la
- * tienda de turno, alternando a partir del último día ya asignado. Devuelve cuántos crea.
+ * tienda de turno, alternando a partir del último día ya asignado. Con `until`, llega al menos
+ * hasta esa fecha (para poder confirmar un reparto más lejano). Devuelve cuántos crea.
  */
-export async function ensureDeliveryDays(service: SupabaseClient, now = new Date()): Promise<number> {
+export async function ensureDeliveryDays(service: SupabaseClient, now = new Date(), until?: ISODate): Promise<number> {
   const today = madridDate(now);
   const [rules, { data: settings }, { data: shopsData }] = await Promise.all([
     getScheduleRules(service),
     service.from("settings").select("weeks_ahead").single(),
     service.from("shops").select("*"),
   ]);
-  const planned = upcomingDeliveryDates(rules, today, (settings?.weeks_ahead ?? 4) * 7, now);
+  const horizon = Math.max((settings?.weeks_ahead ?? 4) * 7, until ? daysBetween(today, until) + 1 : 0);
+  const planned = upcomingDeliveryDates(rules, today, horizon, now);
   if (planned.length === 0) return 0;
 
   const { data: existingData } = await service

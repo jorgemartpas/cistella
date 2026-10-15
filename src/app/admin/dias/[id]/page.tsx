@@ -171,7 +171,7 @@ async function ClosedDay({ day, shopName }: { day: DeliveryDay; shopName: Map<st
     <>
       <Card className="space-y-1">
         <p>
-          <strong>{plural(orders?.length ?? 0, "pedido")}</strong> generados el {formatDateTime(day.orders_generated_at!)}.
+          <strong>{plural(orders?.length ?? 0, "pedido")}</strong> · generados el {formatDateTime(day.orders_generated_at!)}
         </p>
         <p className="text-sm text-muted">Importe estimado: {formatEuros(estimated)}</p>
         <p className="text-sm text-muted">

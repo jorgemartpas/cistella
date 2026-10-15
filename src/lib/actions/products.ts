@@ -23,11 +23,11 @@ const productSchema = z.object({
 });
 
 /**
- * Crea o edita un producto. El admin gestiona el catálogo unificado (y puede corregir cualquier
- * producto); cada carnicería solo los suyos. RLS lo vuelve a comprobar en la base de datos.
+ * Crea o edita un producto (solo el admin; las tiendas proponen el cambio y el admin lo revisa,
+ * ver product-changes.ts). El admin no cambia la tienda ni el tipo de un producto existente.
  */
 export async function saveProduct(_: ActionState, formData: FormData): Promise<ActionState> {
-  const profile = await requireRole("admin", "tienda");
+  await requireRole("admin");
   const raw = Object.fromEntries(formData);
   const parsed = productSchema.safeParse({ ...raw, id: raw.id || undefined, description: raw.description || undefined });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -40,13 +40,7 @@ export async function saveProduct(_: ActionState, formData: FormData): Promise<A
   let shopId: string | null = null;
   let category = input.category;
 
-  if (profile.role === "tienda") {
-    const { data: shop } = await supabase.from("shops").select("type").eq("id", profile.shop_id).single();
-    if (shop?.type !== "carniceria") return { error: "Solo las carnicerías gestionan sus propios productos." };
-    shopId = profile.shop_id;
-    category = "carne";
-  } else if (input.id) {
-    // El admin no cambia la tienda ni el tipo (carne o catálogo unificado) de un producto existente
+  if (input.id) {
     const { data: existing } = await supabase.from("products").select("shop_id, category").eq("id", input.id).single();
     if (!existing) return { error: "Ese producto ya no existe." };
     shopId = existing.shop_id;
@@ -63,8 +57,7 @@ export async function saveProduct(_: ActionState, formData: FormData): Promise<A
     unit: input.unit,
     price_cents: priceCents,
     active: input.active === "on",
-    // «De temporada» solo lo marca el admin (la base de datos tampoco deja a las tiendas)
-    ...(profile.role === "admin" ? { seasonal: input.seasonal === "on" } : {}),
+    seasonal: input.seasonal === "on",
     shop_id: shopId,
   };
 
@@ -90,10 +83,10 @@ export async function saveProduct(_: ActionState, formData: FormData): Promise<A
     await supabase.from("products").update({ image_url: imageUrl }).eq("id", saved.id);
   }
 
-  redirect(profile.role === "admin" ? `/admin/catalogo?categoria=${category}` : "/tienda/productos");
+  redirect(`/admin/catalogo?categoria=${category}`);
 }
 
-/** Activa o retira un producto (en carne equivale a "disponible o no"). */
+/** Activa o retira un producto (en carne equivale a "disponible o agotado"): se aplica al momento, sin revisión. */
 export async function setProductActive(productId: string, active: boolean) {
   await requireRole("admin", "tienda");
   const supabase = await createClient();
@@ -110,11 +103,11 @@ export async function setProductSeasonal(productId: string, seasonal: boolean) {
 }
 
 export async function deleteProduct(productId: string) {
-  const profile = await requireRole("admin", "tienda");
+  await requireRole("admin");
   const supabase = await createClient();
   const { data } = await supabase.from("products").select("category").eq("id", productId).single();
   await supabase.from("products").delete().eq("id", productId);
-  redirect(profile.role === "admin" ? `/admin/catalogo?categoria=${data?.category ?? "fruta"}` : "/tienda/productos");
+  redirect(`/admin/catalogo?categoria=${data?.category ?? "fruta"}`);
 }
 
 /** Marca si una tienda tiene un producto del catálogo unificado. */

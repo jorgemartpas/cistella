@@ -1,5 +1,6 @@
 "use client";
 
+import { proposeProductChange } from "@/lib/actions/product-changes";
 import { saveProduct } from "@/lib/actions/products";
 import type { ProductCategory } from "@/lib/domain/orders";
 import type { Product } from "@/lib/types";
@@ -20,6 +21,7 @@ export function ProductForm({
   defaultCategory,
   priceInput,
   canMarkSeasonal = false,
+  forShop = false,
 }: {
   product?: Product;
   categories: ProductCategory[];
@@ -28,9 +30,11 @@ export function ProductForm({
   priceInput?: string;
   /** Solo el admin marca qué es de temporada (sale en la portada) */
   canMarkSeasonal?: boolean;
+  /** Tienda: no guarda, propone el cambio y queda pendiente de revisión del admin */
+  forShop?: boolean;
 }) {
   return (
-    <ActionForm action={saveProduct}>
+    <ActionForm action={forShop ? proposeProductChange : saveProduct}>
       {product && <input type="hidden" name="id" value={product.id} />}
       <Field label="Foto">
         <ImageInput name="photo" currentUrl={product?.image_url ?? null} />
@@ -66,6 +70,7 @@ export function ProductForm({
           </Select>
         </Field>
       </div>
+{!forShop && (
       <label className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
         <input
           type="checkbox"
@@ -78,6 +83,7 @@ export function ProductForm({
           <span className="block text-sm text-muted">Si lo desmarcas, no aparece en el catálogo ni entra en pedidos.</span>
         </span>
       </label>
+      )}
       {canMarkSeasonal && (
         <label className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
           <input
@@ -94,7 +100,19 @@ export function ProductForm({
           </span>
         </label>
       )}
-      <SubmitButton className="w-full">{product ? "Guardar cambios" : "Crear producto"}</SubmitButton>
+      {forShop ? (
+        <>
+          <p className="text-sm text-muted">
+            El equipo de LaCistella revisa los cambios antes de que salgan en la tienda. Mientras, se sigue viendo como
+            ahora.
+          </p>
+          <SubmitButton className="w-full" pendingText="Enviando…">
+            Enviar a revisión
+          </SubmitButton>
+        </>
+      ) : (
+        <SubmitButton className="w-full">{product ? "Guardar cambios" : "Crear producto"}</SubmitButton>
+      )}
     </ActionForm>
   );
 }

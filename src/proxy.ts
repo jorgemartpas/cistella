@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { supabasePublicConfig } from "@/lib/supabase/config";
 
 // Rutas que exigen sesión. El rol concreto se comprueba en cada página (src/lib/auth.ts).
 const PROTECTED = ["/inicio", "/bienvenida", "/cesta", "/pedidos", "/cuenta", "/tienda", "/admin"];
@@ -8,9 +9,10 @@ const PROTECTED = ["/inicio", "/bienvenida", "/cesta", "/pedidos", "/cuenta", "/
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  const { url, anonKey } = supabasePublicConfig();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {

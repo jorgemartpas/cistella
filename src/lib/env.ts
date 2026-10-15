@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizeKey, normalizeSupabaseUrl } from "@/lib/supabase/config";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -10,19 +11,19 @@ function required(name: string): string {
 
 export const env = {
   get supabaseUrl() {
-    return required("NEXT_PUBLIC_SUPABASE_URL");
+    return normalizeSupabaseUrl(required("NEXT_PUBLIC_SUPABASE_URL"));
   },
   get supabaseAnonKey() {
-    return required("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    return normalizeKey(required("NEXT_PUBLIC_SUPABASE_ANON_KEY"));
   },
   get supabaseServiceRoleKey() {
-    return required("SUPABASE_SERVICE_ROLE_KEY");
+    return normalizeKey(required("SUPABASE_SERVICE_ROLE_KEY"));
   },
   get siteUrl() {
-    return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+    return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").trim().replace(/\/+$/, "");
   },
   get cronSecret() {
-    return process.env.CRON_SECRET ?? null;
+    return process.env.CRON_SECRET?.trim() || null;
   },
   stripe: {
     get secretKey() {

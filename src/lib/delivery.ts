@@ -6,6 +6,7 @@ import { nextInRotation, rotationQueue } from "@/lib/domain/rotation";
 import { nextOpenDate, nextOpenDateForWeekday, upcomingDeliveryDates, type ScheduleRule } from "@/lib/domain/schedule";
 import { basketSlotFor, isDueOn, needsWeekday, type DeliveryFrequency, type SubscriptionCadence } from "@/lib/domain/subscription";
 import { copySavedBasketTo } from "@/lib/saved-baskets";
+import { endUsedUpTrials } from "@/lib/trial";
 import type { DeliveryDay, DeliveryScheduleRow, GenerationReport, Shop, Subscription } from "@/lib/types";
 
 export async function getScheduleRules(supabase: SupabaseClient): Promise<ScheduleRule[]> {
@@ -351,6 +352,14 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
       const listId = autoBasket.get(order.customerId);
       if (!listId) continue;
       await copySavedBasketTo(service, order.customerId, listId, basketSlotFor(frequencyOf.get(order.customerId)!, day.date));
+    }
+  }
+  // Prueba gratis: con el 2.º pedido preparado termina y se cobra la cuota (si falla, el cron lo reintenta)
+  if (Number(created ?? 0) > 0) {
+    try {
+      await endUsedUpTrials(service, plan.orders.map((o) => o.customerId));
+    } catch (error) {
+      console.error("No se han podido revisar las pruebas gratis", error);
     }
   }
   return { date: day.date, orders: Number(created ?? 0), skipped: plan.skippedCustomers.length };

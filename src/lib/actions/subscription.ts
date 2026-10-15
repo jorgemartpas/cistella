@@ -8,6 +8,7 @@ import { isProfileComplete, requireRole } from "@/lib/auth";
 import { getScheduleRules, planAnchor } from "@/lib/delivery";
 import { hasMonthlyFee, needsWeekday, usesDayBaskets, type DeliveryFrequency } from "@/lib/domain/subscription";
 import { env } from "@/lib/env";
+import { FREE_TRIAL, trialEligible } from "@/lib/domain/trial";
 import { monthlyPriceCents } from "@/lib/plans";
 import {
   completeCardSetup,
@@ -87,7 +88,8 @@ function demoPeriodEnd(plan: DeliveryFrequency) {
 
 /**
  * Abre el Checkout de Stripe: suscripción con cuota, o solo guardar la tarjeta (pago por envío).
- * Con `confirming`, al volver se confirma el pedido que el cliente quería confirmar.
+ * Con `confirming`, al volver se confirma el pedido que el cliente quería confirmar. Con `trial`,
+ * la cuota empieza con la prueba gratis (Stripe pide la tarjeta y cobra solo al terminar).
  */
 async function checkoutUrl(
   customerId: string,
@@ -95,6 +97,7 @@ async function checkoutUrl(
   chosen: ChosenPlan,
   returnPath: string,
   confirming = false,
+  trial = false,
 ) {
   const stripe = getStripe()!;
   const metadata: PlanMetadata = {
@@ -122,7 +125,15 @@ async function checkoutUrl(
     mode: "subscription",
     line_items: [{ price, quantity: 1 }],
     payment_method_collection: "always",
-    subscription_data: { metadata },
+    subscription_data: {
+      metadata,
+      ...(trial
+        ? {
+            trial_period_days: FREE_TRIAL.days,
+            trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } },
+          }
+        : {}),
+    },
   });
   return session.url;
 }
@@ -148,11 +159,20 @@ export async function startSubscription(_: ActionState, formData: FormData): Pro
     anchor_date: chosen.anchorDate,
   };
   const stripe = getStripe();
+  const trial = trialEligible(chosen.plan, existing?.trial_started_at);
 
   if (!stripe) {
     if (!paymentsDemoMode()) return { error: "Los pagos aún no están configurados. Inténtalo más tarde." };
+    const now = Date.now();
+    const trialEnd = new Date(now + FREE_TRIAL.days * 86_400_000).toISOString();
     const { error } = await service.from("subscriptions").upsert(
-      { ...base, status: "activa", cancel_at_period_end: false, current_period_end: demoPeriodEnd(chosen.plan) },
+      {
+        ...base,
+        status: "activa",
+        cancel_at_period_end: false,
+        current_period_end: trial ? trialEnd : demoPeriodEnd(chosen.plan),
+        ...(trial ? { trial_started_at: new Date(now).toISOString(), trial_ends_at: trialEnd } : {}),
+      },
       { onConflict: "customer_id" },
     );
     if (error) return { error: "No se ha podido activar el plan." };
@@ -176,7 +196,7 @@ export async function startSubscription(_: ActionState, formData: FormData): Pro
   if (error) return { error: "No se ha podido preparar el plan." };
   await prepareBaskets(profile.id, existing?.frequency ?? null, chosen.plan);
 
-  const url = await checkoutUrl(profile.id, stripeCustomerId, chosen, "/bienvenida", confirming);
+  const url = await checkoutUrl(profile.id, stripeCustomerId, chosen, "/bienvenida", confirming, trial);
   if (!url) return { error: "No se ha podido abrir el pago. Inténtalo de nuevo." };
   redirect(url);
 }
@@ -249,7 +269,14 @@ export async function updatePlan(_: ActionState, formData: FormData): Promise<Ac
       const stripeCustomerId = sub.stripe_customer_id;
       if (!stripeCustomerId) return { error: "No encontramos tu tarjeta. Escríbenos y lo revisamos." };
       await prepareBaskets(profile.id, sub.frequency, chosen.plan);
-      const url = await checkoutUrl(profile.id, stripeCustomerId, chosen, "/cuenta/plan");
+      const url = await checkoutUrl(
+        profile.id,
+        stripeCustomerId,
+        chosen,
+        "/cuenta/plan",
+        false,
+        trialEligible(chosen.plan, sub.trial_started_at),
+      );
       if (!url) return { error: "No se ha podido abrir el pago. Inténtalo de nuevo." };
       redirect(url);
     }
@@ -297,6 +324,10 @@ export async function changeSubscription(action: LifecycleAction): Promise<void>
     refresh();
     return;
   }
+
+  // Durante la prueba gratis no hay cuota que pausar: se puede dar de baja sin pagar nada
+  const inTrial = Boolean(sub.trial_ends_at && new Date(sub.trial_ends_at) > new Date());
+  if (action === "pausar" && inTrial) return;
 
   const stripe = getStripe();
   if (stripe && sub.stripe_subscription_id) {

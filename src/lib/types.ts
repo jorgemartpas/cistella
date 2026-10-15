@@ -67,6 +67,9 @@ export type Subscription = {
   stripe_payment_method_id: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
+  /** Prueba gratis: cuándo empezó (si no es null, ya la ha usado) y hasta cuándo dura por tiempo */
+  trial_started_at: string | null;
+  trial_ends_at: string | null;
 };
 
 export type DeliveryScheduleRow = {

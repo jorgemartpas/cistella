@@ -172,6 +172,19 @@ describe("cliente", () => {
     expect(error?.message).toMatch(/No puedes cambiar/);
   });
 
+  it("no puede tocar las fechas de su prueba gratis (ni alargarla ni borrar que la usó)", async () => {
+    const extend = await lucia
+      .from("subscriptions")
+      .update({ trial_ends_at: "2099-01-01T00:00:00Z" })
+      .eq("customer_id", luciaId);
+    expect(extend.error?.message).toMatch(/No puedes cambiar/);
+    const started = await lucia
+      .from("subscriptions")
+      .update({ trial_started_at: "2026-10-01T00:00:00Z" })
+      .eq("customer_id", luciaId);
+    expect(started.error?.message).toMatch(/No puedes cambiar/);
+  });
+
   it("pide y anula repartos sueltos abiertos, solo suyos", async () => {
     const ask = await lucia.from("delivery_requests").insert({ customer_id: luciaId, delivery_day_id: openDayId });
     expect(ask.error).toBeNull();

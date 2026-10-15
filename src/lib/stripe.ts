@@ -116,6 +116,9 @@ export async function syncStripeSubscription(service: SupabaseClient, sub: Strip
       stripe_subscription_id: sub.id,
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: sub.cancel_at_period_end,
+      // Prueba gratis: se recuerda que la ha usado; mientras dura, hasta cuándo
+      ...(sub.trial_start ? { trial_started_at: new Date(sub.trial_start * 1000).toISOString() } : {}),
+      trial_ends_at: sub.status === "trialing" && sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
       ...(planChanged
         ? { frequency: meta.plan, delivery_weekday: Number(meta.weekday), anchor_date: meta.anchor }
         : {}),

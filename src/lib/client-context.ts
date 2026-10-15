@@ -18,8 +18,10 @@ import { lineTotalCents } from "@/lib/domain/money";
 import type { ScheduleRule } from "@/lib/domain/schedule";
 import { rankUsualProducts } from "@/lib/domain/usual";
 import { usesDayBaskets, type DeliveryFrequency } from "@/lib/domain/subscription";
+import type { TrialState } from "@/lib/domain/trial";
 import { readGuestBasket } from "@/lib/guest-basket";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getTrial } from "@/lib/trial";
 import type { DeliveryDay, Product, Profile, Settings, Shop, Subscription } from "@/lib/types";
 
 /** Cookie con la cesta que se está llenando en el plan de 2 veces por semana (día de la semana) */
@@ -58,6 +60,10 @@ export type ClientContext = {
   closing: DeliveryDay | null;
   /** Productos que la tienda de turno no tiene para el próximo reparto */
   unavailable: Set<string>;
+  /** Puede empezar la prueba gratis (visitante, o cliente sin plan que nunca la ha usado) */
+  trialOffer: boolean;
+  /** Prueba gratis en curso: días y pedidos que le quedan */
+  trial: TrialState | null;
 };
 
 /** Cliente con sesión: el contexto, o a /entrar si es un visitante. */
@@ -149,6 +155,9 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
     ? await supabase.rpc("unavailable_on_day", { p_day_id: upcomingDay.id })
     : { data: [] };
 
+  const subscribed = Boolean(sub && ["activa", "pausada", "impagada"].includes(sub.status));
+  const trial = sub?.status === "activa" ? await getTrial(supabase, sub, now) : null;
+
   const basket = new Map(
     (basketRows ?? []).filter((b) => b.slot === slot).map((b) => [b.product_id as string, Number(b.quantity)]),
   );
@@ -178,6 +187,8 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
     toConfirm,
     closing,
     unavailable: new Set<string>((unavailableIds as string[] | null) ?? []),
+    trialOffer: !subscribed && !sub?.trial_started_at,
+    trial,
   };
 });
 

@@ -12,11 +12,14 @@ export function QuantityStepper({
   productName,
   unit,
   quantity,
+  slot = 0,
 }: {
   productId: string;
   productName: string;
   unit: ProductUnit;
   quantity: number;
+  /** Cesta: 0 la única, o el día de la semana (plan de 2 veces por semana) */
+  slot?: number;
 }) {
   const [pending, startTransition] = useTransition();
   const [optimistic, setOptimistic] = useOptimistic(quantity);
@@ -28,7 +31,7 @@ export function QuantityStepper({
     setError(null);
     startTransition(async () => {
       setOptimistic(value);
-      const result = await setBasketQuantity(productId, value);
+      const result = await setBasketQuantity(productId, value, slot);
       if (result.error) setError(result.error);
     });
   };

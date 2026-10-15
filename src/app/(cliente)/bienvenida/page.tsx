@@ -2,18 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { PlanFields, ProfileFields } from "@/components/customer-fields";
+import { ProfileFields } from "@/components/customer-fields";
+import { PlanPicker } from "@/components/plan-picker";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { ButtonLink, Card, Notice, PageSkeleton } from "@/components/ui";
+import { ButtonLink, Notice, PageSkeleton } from "@/components/ui";
 import { syncCheckoutSession, startSubscription } from "@/lib/actions/subscription";
 import { updateProfile } from "@/lib/actions/profile";
 import { isProfileComplete, requireRole } from "@/lib/auth";
 import { getScheduleRules, nextDeliveryFor } from "@/lib/delivery";
-import { formatEuros } from "@/lib/domain/money";
 import { formatCutoff, formatDay } from "@/lib/format";
 import { getStripe, paymentsDemoMode } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
-import type { Subscription } from "@/lib/types";
+import type { Settings, Subscription } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Bienvenida" };
 
@@ -26,7 +26,7 @@ export default function WelcomePage({ searchParams }: PageProps<"/bienvenida">) 
 }
 
 function Steps({ current }: { current: 1 | 2 | 3 }) {
-  const steps = ["Tus datos", "Tu reparto", "Pago"];
+  const steps = ["Tus datos", "Tu plan", "Pago"];
   return (
     <ol className="mb-6 flex gap-2" aria-label="Pasos del alta">
       {steps.map((label, i) => (
@@ -48,18 +48,24 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
   const [{ data: sub }, rules, { data: settings }] = await Promise.all([
     supabase.from("subscriptions").select("*").eq("customer_id", profile.id).maybeSingle<Subscription>(),
     getScheduleRules(supabase),
-    supabase.from("settings").select("subscription_price_cents").single(),
+    supabase.from("settings").select("*").single<Settings>(),
   ]);
   const isSubscribed = sub && ["activa", "pausada", "impagada"].includes(sub.status);
 
   if (isSubscribed && pago === "ok") {
-    const next = sub.status === "activa" ? await nextDeliveryFor(supabase, sub, new Date()) : null;
+    const perDelivery = sub.frequency === "por_envio";
+    const next = sub.status === "activa" && !perDelivery ? await nextDeliveryFor(supabase, sub, new Date()) : null;
     return (
       <div className="py-6 text-center">
         <div className="text-5xl" aria-hidden>
           🧺
         </div>
-        <h1 className="mt-4 text-2xl font-bold">¡Ya estás suscrito!</h1>
+        <h1 className="mt-4 text-2xl font-bold">{perDelivery ? "¡Ya estás dentro!" : "¡Ya estás suscrito!"}</h1>
+        {perDelivery && (
+          <p className="mt-2 text-muted">
+            Monta tu cesta y pide los repartos que quieras desde la pestaña «Mi cesta».
+          </p>
+        )}
         {next && (
           <p className="mt-2 text-muted">
             Tu primer reparto es el <strong className="text-text">{formatDay(next.date)}</strong>. Puedes montar tu
@@ -102,12 +108,11 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
     );
   }
 
-  const price = formatEuros(settings?.subscription_price_cents ?? 2000);
   const demo = !getStripe() && paymentsDemoMode();
   return (
     <>
       <Steps current={2} />
-      <h1 className="text-2xl font-bold">Elige tu reparto</h1>
+      <h1 className="text-2xl font-bold">Elige tu plan</h1>
       <p className="mb-5 mt-1 text-muted">Lo puedes cambiar cuando quieras desde tu cuenta.</p>
       {pago === "cancelado" && (
         <div className="mb-4">
@@ -115,20 +120,10 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
         </div>
       )}
       <ActionForm action={startSubscription}>
-        <PlanFields rules={rules} weekday={sub?.delivery_weekday} frequency={sub?.frequency} />
-        <Card className="space-y-1">
-          <div className="flex items-baseline justify-between">
-            <span className="font-semibold">Suscripción Cistella</span>
-            <span className="text-lg font-bold">{price}/mes</span>
-          </div>
-          <p className="text-sm text-muted">
-            IVA incluido. Sin permanencia: puedes pausarla o darte de baja cuando quieras. Los productos se cobran aparte
-            en cada pedido, con el peso real, a la misma tarjeta.
-          </p>
-        </Card>
+        {settings && <PlanPicker rules={rules} prices={settings} plan={sub?.frequency} weekday={sub?.delivery_weekday} />}
         {demo && <Notice tone="warning">Modo demo: no se cobrará nada (Stripe no está configurado).</Notice>}
         <SubmitButton className="w-full" pendingText="Abriendo el pago…">
-          {demo ? "Activar suscripción (demo)" : `Pagar ${price} con tarjeta`}
+          {demo ? "Activar plan (demo)" : "Continuar al pago"}
         </SubmitButton>
       </ActionForm>
     </>

@@ -50,7 +50,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/pedidos/[id]">, "params"
       unitPriceCents: i.unit_price_cents,
     })),
   );
-  const total = order.final_total_cents ?? current;
+  const total = order.final_total_cents ?? current + order.delivery_fee_cents;
 
   return (
     <>
@@ -115,6 +115,12 @@ async function OrderDetail({ params }: Pick<PageProps<"/pedidos/[id]">, "params"
       )}
 
       <Card className="mt-6 space-y-1">
+        {order.delivery_fee_cents > 0 && (
+          <div className="flex items-baseline justify-between text-sm">
+            <span>Envío</span>
+            <span>{formatEuros(order.delivery_fee_cents)}</span>
+          </div>
+        )}
         <div className="flex items-baseline justify-between">
           <span className="font-semibold">
             {order.payment_status === "pagado"
@@ -127,7 +133,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/pedidos/[id]">, "params"
         </div>
         {order.final_total_cents === null && (
           <p className="text-sm text-muted">
-            Estimado al hacer el pedido: {formatEuros(order.estimated_total_cents)}. Se cobra con el peso real al
+            Estimado al hacer el pedido: {formatEuros(order.estimated_total_cents + order.delivery_fee_cents)}. Se cobra con el peso real al
             entregarlo. IVA incluido.
           </p>
         )}

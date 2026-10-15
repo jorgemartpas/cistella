@@ -155,7 +155,7 @@ async function ClosedDay({ day, shopName }: { day: DeliveryDay; shopName: Map<st
     .eq("delivery_day_id", day.id);
   const { data: orders } = await supabase
     .from("orders")
-    .select("estimated_total_cents")
+    .select("estimated_total_cents, delivery_fee_cents")
     .eq("delivery_day_id", day.id);
   const byShop = new Map<string, { total: number; prepared: number }>();
   for (const so of shopOrders ?? []) {
@@ -164,7 +164,7 @@ async function ClosedDay({ day, shopName }: { day: DeliveryDay; shopName: Map<st
     if (so.status !== "pendiente") entry.prepared += 1;
     byShop.set(so.shop_id, entry);
   }
-  const estimated = (orders ?? []).reduce((sum, o) => sum + o.estimated_total_cents, 0);
+  const estimated = (orders ?? []).reduce((sum, o) => sum + o.estimated_total_cents + o.delivery_fee_cents, 0);
   const report = day.generation_report;
 
   return (

@@ -9,7 +9,9 @@ import { madridDate } from "@/lib/domain/dates";
 import { formatEuros } from "@/lib/domain/money";
 import { capitalize, formatCutoff, formatDay, plural } from "@/lib/format";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import type { DeliveryDay } from "@/lib/types";
+import type { DeliveryFrequency } from "@/lib/domain/subscription";
+import { monthlyPriceCents } from "@/lib/plans";
+import type { DeliveryDay, Settings } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -56,13 +58,18 @@ async function Dashboard() {
   const supabase = await createClient();
   const today = madridDate(new Date());
   const [{ data: subs }, { data: days }, { data: failed }, { data: settings }] = await Promise.all([
-    supabase.from("subscriptions").select("status"),
+    supabase.from("subscriptions").select("status, frequency"),
     supabase.from("delivery_days").select("*").gte("date", today).neq("status", "cancelado").order("date").limit(4),
     supabase.from("orders").select("id").eq("payment_status", "fallido"),
-    supabase.from("settings").select("subscription_price_cents").single(),
+    supabase.from("settings").select("*").single<Settings>(),
   ]);
   const count = (status: string) => (subs ?? []).filter((s) => s.status === status).length;
-  const active = count("activa");
+  const activeSubs = (subs ?? []).filter((s) => s.status === "activa");
+  const active = activeSubs.length;
+  const perDelivery = activeSubs.filter((s) => s.frequency === "por_envio").length;
+  const monthly = settings
+    ? activeSubs.reduce((sum, s) => sum + monthlyPriceCents(settings, s.frequency as DeliveryFrequency), 0)
+    : 0;
   const upcoming = (days ?? []) as DeliveryDay[];
   const nextClosed = upcoming.find((d) => d.status === "cerrado");
   const nextOpen = upcoming.find((d) => d.status === "abierto");
@@ -99,15 +106,15 @@ async function Dashboard() {
       )}
       <div className="grid grid-cols-2 gap-3">
         <Card>
-          <p className="text-sm text-muted">Suscripciones activas</p>
+          <p className="text-sm text-muted">Clientes activos</p>
           <p className="text-2xl font-bold tabular-nums">{active}</p>
           <p className="text-xs text-muted">
-            {count("pausada")} pausadas · {count("impagada")} con pago pendiente
+            {perDelivery} por envío · {count("pausada")} pausadas · {count("impagada")} con pago pendiente
           </p>
         </Card>
         <Card>
           <p className="text-sm text-muted">Cuotas al mes</p>
-          <p className="text-2xl font-bold tabular-nums">{formatEuros(active * (settings?.subscription_price_cents ?? 2000))}</p>
+          <p className="text-2xl font-bold tabular-nums">{formatEuros(monthly)}</p>
           <p className="text-xs text-muted">IVA incluido</p>
         </Card>
       </div>

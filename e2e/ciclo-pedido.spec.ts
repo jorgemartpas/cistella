@@ -33,10 +33,10 @@ test("ciclo completo: alta, cesta, cierre, preparación, reparto y entrega", asy
   await main(page).getByLabel("Código postal").fill("46600");
   await main(page).getByRole("button", { name: "Continuar" }).click();
 
-  await expect(main(page).getByRole("heading", { name: "Elige tu reparto" })).toBeVisible();
-  await main(page).getByRole("radio", { name: /Martes/ }).check();
-  await main(page).getByRole("radio", { name: "Cada semana" }).check();
-  await main(page).getByRole("button", { name: /Activar suscripción|Pagar/ }).click();
+  await expect(main(page).getByRole("heading", { name: "Elige tu plan" })).toBeVisible();
+  await main(page).getByRole("radio", { name: /^Cada semana/ }).check();
+  await main(page).getByRole("radio", { name: /^Martes/ }).check();
+  await main(page).getByRole("button", { name: /Activar plan|Continuar al pago/ }).click();
   await expect(main(page).getByRole("heading", { name: "¡Ya estás suscrito!" })).toBeVisible();
 
   // 2. Monta la cesta: fruta (catálogo unificado) y carne de una carnicería

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { Icon } from "@/components/icons";
 import { Badge, ButtonLink, Card, EmptyState, PageHeader, PageSkeleton, SectionTitle } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
-import { nextDeliveryFor } from "@/lib/delivery";
+import { nextDeliveryFor, requestableDays } from "@/lib/delivery";
 import { formatEuros } from "@/lib/domain/money";
 import { capitalize, formatCutoff, formatDay } from "@/lib/format";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/lib/labels";
@@ -43,7 +43,14 @@ async function Orders() {
   );
   const inProgress = orders.filter((o) => ["pendiente", "preparado", "en_reparto"].includes(o.status));
   const history = orders.filter((o) => !inProgress.includes(o));
-  const next = sub?.status === "activa" ? await nextDeliveryFor(supabase, sub, new Date()) : null;
+  const perDelivery = sub?.frequency === "por_envio";
+  let next: { date: string; cutoffAt: Date } | null = null;
+  if (sub?.status === "activa" && perDelivery) {
+    const requested = (await requestableDays(supabase, profile.id, new Date())).find((d) => d.requested);
+    next = requested ? { date: requested.day.date, cutoffAt: new Date(requested.day.cutoff_at) } : null;
+  } else if (sub?.status === "activa") {
+    next = await nextDeliveryFor(supabase, sub, new Date());
+  }
 
   return (
     <>
@@ -62,7 +69,9 @@ async function Orders() {
         <p className="text-sm text-muted">
           {sub?.status === "pausada"
             ? "Tu suscripción está pausada."
-            : sub?.status === "activa"
+            : perDelivery && sub?.status === "activa"
+              ? "No tienes ningún reparto pedido. Pídelo desde tu cesta."
+              : sub?.status === "activa"
               ? "No hay repartos programados ahora mismo."
               : "Cuando te suscribas, aquí verás tu próximo pedido."}
         </p>
@@ -95,7 +104,7 @@ async function Orders() {
 
 function OrderRow({ order }: { order: OrderWithDay }) {
   const status = ORDER_STATUS[order.status];
-  const total = order.final_total_cents ?? order.estimated_total_cents;
+  const total = order.final_total_cents ?? order.estimated_total_cents + order.delivery_fee_cents;
   return (
     <li>
       <Link href={`/pedidos/${order.id}`}>

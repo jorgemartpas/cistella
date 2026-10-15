@@ -17,7 +17,10 @@ const settingsSchema = z.object({
   allowed_postal_codes: z.string(),
   default_commission_pct: z.coerce.number().min(0).max(100),
   weeks_ahead: z.coerce.number().int().min(1).max(12),
-  subscription_price: z.string(),
+  price_dos_por_semana: z.string(),
+  price_semanal: z.string(),
+  price_quincenal: z.string(),
+  delivery_fee: z.string(),
 });
 
 async function saveSettings(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -32,9 +35,16 @@ async function saveSettings(_: ActionState, formData: FormData): Promise<ActionS
   const minOrder = parsed.data.min_order.trim() === "" || parsed.data.min_order.trim() === "0"
     ? 0
     : parsePriceCents(parsed.data.min_order);
-  const price = parsePriceCents(parsed.data.subscription_price);
+  const prices = {
+    price_dos_por_semana_cents: parsePriceCents(parsed.data.price_dos_por_semana),
+    price_semanal_cents: parsePriceCents(parsed.data.price_semanal),
+    price_quincenal_cents: parsePriceCents(parsed.data.price_quincenal),
+    delivery_fee_cents: parsePriceCents(parsed.data.delivery_fee),
+  };
   const postalCodes = parsed.data.allowed_postal_codes.split(/[\s,]+/).filter(Boolean);
-  if (minOrder === null || price === null) return { error: "Escribe los importes así: 15,00" };
+  if (minOrder === null || Object.values(prices).some((p) => p === null)) {
+    return { error: "Escribe los importes así: 15,00" };
+  }
   if (postalCodes.length === 0 || postalCodes.some((cp) => !/^\d{5}$/.test(cp))) {
     return { error: "Los códigos postales tienen que ser de 5 cifras, separados por comas." };
   }
@@ -46,7 +56,7 @@ async function saveSettings(_: ActionState, formData: FormData): Promise<ActionS
       allowed_postal_codes: postalCodes,
       default_commission_pct: parsed.data.default_commission_pct,
       weeks_ahead: parsed.data.weeks_ahead,
-      subscription_price_cents: price,
+      ...prices,
     })
     .eq("id", true);
   if (error) return { error: "No se han podido guardar los ajustes." };
@@ -85,12 +95,27 @@ async function SettingsForm() {
       <Field label="Semanas de repartos programados por adelantado">
         <Input name="weeks_ahead" type="number" min={1} max={12} defaultValue={settings.weeks_ahead} />
       </Field>
-      <Field
-        label="Precio de la suscripción que se muestra (€/mes)"
-        hint="Solo es el texto de la web: el cobro real lo define el precio de Stripe (STRIPE_PRICE_ID)."
-      >
-        <Input name="subscription_price" inputMode="decimal" defaultValue={centsToInput(settings.subscription_price_cents)} />
-      </Field>
+      <fieldset className="space-y-3 rounded-2xl border border-border p-4">
+        <legend className="px-1 text-sm font-semibold">Precios de los planes (IVA incluido)</legend>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="2 veces por semana (€/mes)">
+            <Input name="price_dos_por_semana" inputMode="decimal" defaultValue={centsToInput(settings.price_dos_por_semana_cents)} />
+          </Field>
+          <Field label="Cada semana (€/mes)">
+            <Input name="price_semanal" inputMode="decimal" defaultValue={centsToInput(settings.price_semanal_cents)} />
+          </Field>
+          <Field label="Cada 2 semanas (€/mes)">
+            <Input name="price_quincenal" inputMode="decimal" defaultValue={centsToInput(settings.price_quincenal_cents)} />
+          </Field>
+          <Field label="Pago por envío (€ por reparto)">
+            <Input name="delivery_fee" inputMode="decimal" defaultValue={centsToInput(settings.delivery_fee_cents)} />
+          </Field>
+        </div>
+        <p className="text-xs text-muted">
+          Un precio nuevo se aplica a las altas y cambios de plan desde ese momento; las suscripciones que ya existen
+          siguen con su precio.
+        </p>
+      </fieldset>
       <SubmitButton className="w-full">Guardar ajustes</SubmitButton>
     </ActionForm>
   );

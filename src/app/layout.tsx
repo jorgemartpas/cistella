@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     template: "%s · Cistella",
   },
   description:
-    "Fruta, verdura, carne y pescado de las tiendas de Alzira con reparto periódico a domicilio. Suscripción de 20 €/mes.",
+    "Fruta, verdura, carne y pescado de las tiendas de Alzira con reparto a domicilio. Planes desde 16 €/mes o pago por envío.",
   applicationName: "Cistella",
   appleWebApp: { capable: true, title: "Cistella", statusBarStyle: "default" },
   formatDetection: { telephone: false },

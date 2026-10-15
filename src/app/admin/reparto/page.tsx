@@ -177,17 +177,16 @@ function DeliveryCard({ order, shopById }: { order: FullOrder; shopById: Map<str
   const status = ORDER_STATUS[order.status];
   const payment = PAYMENT_STATUS[order.payment_status];
   const open = ["pendiente", "preparado", "en_reparto"].includes(order.status);
-  const total =
-    order.final_total_cents ??
-    finalTotalCents(
-      order.shop_orders.flatMap((so) =>
-        so.order_items.map((i) => ({
-          quantityOrdered: Number(i.quantity_ordered),
-          quantityActual: i.quantity_actual === null ? null : Number(i.quantity_actual),
-          unitPriceCents: i.unit_price_cents,
-        })),
-      ),
-    );
+  const productsTotal = finalTotalCents(
+    order.shop_orders.flatMap((so) =>
+      so.order_items.map((i) => ({
+        quantityOrdered: Number(i.quantity_ordered),
+        quantityActual: i.quantity_actual === null ? null : Number(i.quantity_actual),
+        unitPriceCents: i.unit_price_cents,
+      })),
+    ),
+  );
+  const total = order.final_total_cents ?? productsTotal + order.delivery_fee_cents;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.address}, ${order.postal_code ?? ""} Alzira`)}`;
 
   return (
@@ -222,8 +221,9 @@ function DeliveryCard({ order, shopById }: { order: FullOrder; shopById: Map<str
       </ul>
       <p className="text-sm">
         {order.payment_status === "pagado" ? "Cobrado" : "A cobrar"}: <strong>{formatEuros(total)}</strong>
-        {order.final_total_cents === null && order.estimated_total_cents !== total && (
-          <span className="text-muted"> (estimado {formatEuros(order.estimated_total_cents)})</span>
+        {order.delivery_fee_cents > 0 && <span className="text-muted"> · incluye envío</span>}
+        {order.final_total_cents === null && order.estimated_total_cents + order.delivery_fee_cents !== total && (
+          <span className="text-muted"> (estimado {formatEuros(order.estimated_total_cents + order.delivery_fee_cents)})</span>
         )}
       </p>
       {order.payment_error && <p className="text-sm text-danger">{order.payment_error}</p>}

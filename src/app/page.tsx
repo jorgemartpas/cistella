@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Logo } from "@/components/logo";
-import { ButtonLink, Card } from "@/components/ui";
+import { Badge, ButtonLink, Card } from "@/components/ui";
+import { FREQUENCY_LABELS, PLAN_ORDER, type DeliveryFrequency } from "@/lib/domain/subscription";
+import { DEFAULT_PRICES, planPriceLabel, type PlanPrices } from "@/lib/plans";
+import { createClient } from "@/lib/supabase/server";
 
 const steps = [
   {
@@ -18,22 +22,43 @@ const steps = [
 ];
 
 const shops = [
-  { type: "Carnicerías", icon: "🥩", names: "Oskiñez · Carnicería Reino", note: "Eliges de qué carnicería es cada producto." },
-  { type: "Pescaderías", icon: "🐟", names: "Pescados Miguel Ferrer · Pescados Tomás", note: "Se turnan en cada reparto." },
-  { type: "Fruterías", icon: "🍊", names: "Dos fruterías de Alzira", note: "Fruta y verdura de temporada, también por turnos." },
+  {
+    type: "Carnicerías",
+    icon: "🥩",
+    names: "Oskiñez · Carnicería Reino",
+    note: "Eliges de qué carnicería es cada producto.",
+  },
+  {
+    type: "Pescaderías",
+    icon: "🐟",
+    names: "Pescados Miguel Ferrer · Pescados Tomás",
+    note: "Se turnan en cada reparto.",
+  },
+  {
+    type: "Fruterías",
+    icon: "🍊",
+    names: "Dos fruterías de Alzira",
+    note: "Fruta y verdura de temporada, también por turnos.",
+  },
 ];
 
 const faqs = [
   {
     q: "¿Cuánto cuesta?",
-    a: "La suscripción son 20 €/mes, con IVA incluido. Los productos se pagan aparte, en cada pedido y con el peso real, a la misma tarjeta.",
+    a: "Depende del plan que elijas (mira «Planes»), con IVA incluido. Los productos se pagan aparte, en cada reparto y con el peso real, a la misma tarjeta.",
   },
   {
     q: "¿Qué días repartís?",
-    a: "Martes y viernes. Puedes cambiar tu cesta hasta las 20:00 del día anterior. Eliges si quieres reparto cada semana, cada dos o cada cuatro.",
+    a: "Martes y viernes. Puedes cambiar tu cesta hasta las 20:00 del día anterior. Eliges si quieres reparto los dos días, uno a la semana, cada dos semanas o solo cuando lo pidas.",
   },
-  { q: "¿Dónde repartís?", a: "De momento solo en Alzira (código postal 46600)." },
-  { q: "¿Puedo pausar o darme de baja?", a: "Sí, desde tu cuenta, cuando quieras y sin permanencia." },
+  {
+    q: "¿Dónde repartís?",
+    a: "De momento solo en Alzira (código postal 46600).",
+  },
+  {
+    q: "¿Puedo cambiar de plan o darme de baja?",
+    a: "Sí, desde tu cuenta, cuando quieras y sin permanencia.",
+  },
 ];
 
 export default function Landing() {
@@ -60,10 +85,10 @@ export default function Landing() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="/registro" className="sm:px-8">
-              Suscribirme por 20 €/mes
+              Empezar
             </ButtonLink>
-            <ButtonLink href="#como-funciona" variant="secondary">
-              Cómo funciona
+            <ButtonLink href="#planes" variant="secondary">
+              Ver planes y precios
             </ButtonLink>
           </div>
         </section>
@@ -87,23 +112,33 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-4 py-12">
-          <h2 className="text-2xl font-bold">Las tiendas del piloto</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            {shops.map((shop) => (
-              <Card key={shop.type}>
-                <div className="text-3xl" aria-hidden>
-                  {shop.icon}
-                </div>
-                <h3 className="mt-2 font-semibold">{shop.type}</h3>
-                <p className="text-sm">{shop.names}</p>
-                <p className="mt-2 text-sm text-muted">{shop.note}</p>
-              </Card>
-            ))}
-          </div>
+        <section id="planes" className="mx-auto max-w-5xl px-4 py-12">
+          <h2 className="text-2xl font-bold">Planes</h2>
+          <p className="mt-1 text-muted">Con IVA incluido. Sin permanencia: cambias de plan cuando quieras.</p>
+          <Suspense fallback={<PlanCards prices={DEFAULT_PRICES} />}>
+            <Pricing />
+          </Suspense>
         </section>
 
         <section className="bg-surface-2/60 py-12">
+          <div className="mx-auto max-w-5xl px-4">
+            <h2 className="text-2xl font-bold">Las tiendas del piloto</h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              {shops.map((shop) => (
+                <Card key={shop.type}>
+                  <div className="text-3xl" aria-hidden>
+                    {shop.icon}
+                  </div>
+                  <h3 className="mt-2 font-semibold">{shop.type}</h3>
+                  <p className="text-sm">{shop.names}</p>
+                  <p className="mt-2 text-sm text-muted">{shop.note}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-12">
           <div className="mx-auto max-w-3xl px-4">
             <h2 className="text-2xl font-bold">Preguntas frecuentes</h2>
             <dl className="mt-6 space-y-3">
@@ -131,4 +166,40 @@ export default function Landing() {
       </footer>
     </div>
   );
+}
+
+const PLAN_TEXT: Record<DeliveryFrequency, string> = {
+  dos_por_semana: "Martes y viernes, con una cesta distinta para cada día.",
+  semanal: "Un reparto a la semana, el día que elijas.",
+  quincenal: "Un reparto cada dos semanas.",
+  por_envio: "Sin cuota. Pides solo los repartos que quieras.",
+};
+
+function PlanCards({ prices }: { prices: PlanPrices }) {
+  return (
+    <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {PLAN_ORDER.map((plan) => (
+        <li key={plan}>
+          <Card className={plan === "semanal" ? "h-full border-primary" : "h-full"}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold">{FREQUENCY_LABELS[plan]}</h3>
+              {plan === "semanal" && <Badge tone="success">El más elegido</Badge>}
+            </div>
+            <p className="mt-2 text-2xl font-bold">{planPriceLabel(prices, plan)}</p>
+            <p className="mt-1 text-sm text-muted">{PLAN_TEXT[plan]}</p>
+          </Card>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Precios actuales (los que el admin fija en Ajustes) */
+async function Pricing() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("settings")
+    .select("price_dos_por_semana_cents, price_semanal_cents, price_quincenal_cents, delivery_fee_cents")
+    .single<PlanPrices>();
+  return <PlanCards prices={data ?? DEFAULT_PRICES} />;
 }

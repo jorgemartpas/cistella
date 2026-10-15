@@ -3,17 +3,27 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Icon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
+import { DeliveryRequestToggle } from "@/components/delivery-request-toggle";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { Badge, ButtonLink, Card, EmptyState, Notice, PageSkeleton, SectionTitle, cx } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { CATEGORY_ORDER, getProducts, getShops } from "@/lib/catalog";
-import { closingDayFor, nextDeliveryFor } from "@/lib/delivery";
+import {
+  closingDayFor,
+  ensureDeliveryDays,
+  getScheduleRules,
+  nextDeliveryFor,
+  requestableDays,
+  type RequestableDay,
+  type UpcomingDelivery,
+} from "@/lib/delivery";
 import { formatEuros, formatUnitPrice, lineTotalCents } from "@/lib/domain/money";
 import { CATEGORY_LABELS, type ProductCategory } from "@/lib/domain/orders";
-import { FREQUENCY_LABELS } from "@/lib/domain/subscription";
+import { WEEKDAY_NAMES } from "@/lib/domain/schedule";
+import { FREQUENCY_LABELS, usesDayBaskets } from "@/lib/domain/subscription";
 import { formatCutoff, formatDay } from "@/lib/format";
-import { createClient } from "@/lib/supabase/server";
-import type { Product, Subscription } from "@/lib/types";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import type { Product, Settings, Subscription } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Mi cesta" };
 
@@ -30,28 +40,45 @@ export default function BasketPage({ searchParams }: PageProps<"/cesta">) {
 
 async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams">) {
   const profile = await requireRole("cliente");
-  const { ver } = await searchParams;
+  const { ver, dia } = await searchParams;
   const supabase = await createClient();
   const now = new Date();
 
-  const [{ data: sub }, products, shops, { data: basketRows }, { data: settings }] = await Promise.all([
+  const [{ data: sub }, products, shops, rules, { data: basketRows }, { data: settings }] = await Promise.all([
     supabase.from("subscriptions").select("*").eq("customer_id", profile.id).maybeSingle<Subscription>(),
     getProducts(supabase, { onlyActive: true }),
     getShops(supabase),
-    supabase.from("basket_items").select("product_id, quantity").eq("customer_id", profile.id),
-    supabase.from("settings").select("min_order_cents").single(),
+    getScheduleRules(supabase),
+    supabase.from("basket_items").select("product_id, quantity, slot").eq("customer_id", profile.id),
+    supabase.from("settings").select("*").single<Settings>(),
   ]);
 
+  const plan = sub?.frequency ?? "semanal";
   const isActive = sub?.status === "activa";
-  const [next, closing] = isActive
-    ? await Promise.all([nextDeliveryFor(supabase, sub, now), closingDayFor(supabase, sub, now)])
-    : [null, null];
-  const { data: unavailableIds } = next?.day
-    ? await supabase.rpc("unavailable_on_day", { p_day_id: next.day.id })
+  const perDelivery = plan === "por_envio";
+  // Plan de 2 veces por semana: una cesta para cada día de reparto
+  const dayBaskets = usesDayBaskets(plan);
+  const weekdays = rules.filter((r) => r.active).map((r) => r.weekday);
+  const slot = dayBaskets ? (weekdays.includes(Number(dia)) ? Number(dia) : (weekdays[0] ?? 0)) : 0;
+
+  let next: UpcomingDelivery | null = null;
+  let requestable: RequestableDay[] = [];
+  if (isActive && perDelivery) {
+    await ensureDeliveryDays(createServiceClient(), now);
+    requestable = await requestableDays(supabase, profile.id, now);
+  } else if (isActive) {
+    next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
+  }
+  const closing = isActive ? await closingDayFor(supabase, sub, now) : null;
+  const upcomingDay = next?.day ?? requestable.find((r) => r.requested)?.day ?? null;
+  const { data: unavailableIds } = upcomingDay
+    ? await supabase.rpc("unavailable_on_day", { p_day_id: upcomingDay.id })
     : { data: [] };
   const unavailable = new Set<string>((unavailableIds as string[] | null) ?? []);
 
-  const basket = new Map((basketRows ?? []).map((b) => [b.product_id as string, Number(b.quantity)]));
+  const basket = new Map(
+    (basketRows ?? []).filter((b) => b.slot === slot).map((b) => [b.product_id as string, Number(b.quantity)]),
+  );
   const shopName = new Map(shops.map((s) => [s.id, s.name]));
   const view: View =
     ver === "cesta" || CATEGORY_ORDER.includes(ver as ProductCategory)
@@ -59,17 +86,45 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
       : basket.size > 0
         ? "cesta"
         : "fruta";
+  const href = (v: View, s = slot) => `/cesta?ver=${v}${dayBaskets ? `&dia=${s}` : ""}`;
 
   return (
     <>
-      <DeliveryBanner sub={sub} next={next} closingDate={closing?.date ?? null} />
+      {dayBaskets && (
+        <nav aria-label="Cesta de cada día" className="mb-3 grid grid-cols-2 gap-2">
+          {weekdays.map((w) => (
+            <Link
+              key={w}
+              href={href(view, w)}
+              scroll={false}
+              aria-current={w === slot ? "page" : undefined}
+              className={cx(
+                "rounded-xl px-3 py-2.5 text-center text-sm font-semibold",
+                w === slot ? "bg-primary text-primary-ink" : "border border-border bg-surface",
+              )}
+            >
+              Cesta del {WEEKDAY_NAMES[w]}
+            </Link>
+          ))}
+        </nav>
+      )}
+
+      {perDelivery && isActive ? (
+        <RequestBanner
+          days={requestable}
+          feeCents={settings?.delivery_fee_cents ?? 0}
+          closingDate={closing?.date ?? null}
+        />
+      ) : (
+        <DeliveryBanner sub={sub} next={next} closingDate={closing?.date ?? null} />
+      )}
 
       <nav aria-label="Secciones de la cesta" className="-mx-4 mb-4 mt-5 overflow-x-auto px-4">
         <ul className="flex gap-2">
           {(["cesta", ...CATEGORY_ORDER] as View[]).map((v) => (
             <li key={v}>
               <Link
-                href={`/cesta?ver=${v}`}
+                href={href(v)}
                 scroll={false}
                 aria-current={v === view ? "page" : undefined}
                 className={cx(
@@ -79,7 +134,8 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
               >
                 {v === "cesta" ? (
                   <>
-                    <Icon name="basket" className="size-4" /> Mi cesta{basket.size > 0 && ` (${basket.size})`}
+                    <Icon name="basket" className="size-4" /> {dayBaskets ? `Cesta del ${WEEKDAY_NAMES[slot]}` : "Mi cesta"}
+                    {basket.size > 0 && ` (${basket.size})`}
                   </>
                 ) : (
                   <>
@@ -96,15 +152,18 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
         <BasketView
           products={products}
           basket={basket}
+          slot={slot}
           shopName={shopName}
           unavailable={unavailable}
           minOrderCents={settings?.min_order_cents ?? 0}
+          deliveryFeeCents={perDelivery ? (settings?.delivery_fee_cents ?? 0) : 0}
         />
       ) : (
         <CategoryView
           category={view}
           products={products.filter((p) => p.category === view)}
           basket={basket}
+          slot={slot}
           shopName={shopName}
           unavailable={unavailable}
         />
@@ -119,16 +178,16 @@ function DeliveryBanner({
   closingDate,
 }: {
   sub: Subscription | null;
-  next: Awaited<ReturnType<typeof nextDeliveryFor>>;
+  next: UpcomingDelivery | null;
   closingDate: string | null;
 }) {
   if (!sub || sub.status === "incompleta" || sub.status === "cancelada") {
     return (
       <Card className="bg-accent-soft border-transparent">
-        <p className="font-semibold">Aún no tienes la suscripción activa</p>
-        <p className="mt-1 text-sm">Puedes ir montando la cesta. Para recibirla, completa el alta.</p>
+        <p className="font-semibold">Aún no tienes un plan activo</p>
+        <p className="mt-1 text-sm">Puedes ir montando la cesta. Para recibirla, elige tu plan.</p>
         <ButtonLink href="/bienvenida" className="mt-3 w-full">
-          Completar el alta
+          Elegir plan
         </ButtonLink>
       </Card>
     );
@@ -170,14 +229,53 @@ function DeliveryBanner({
   );
 }
 
+/** Pago por envío: elegir qué repartos se quieren */
+function RequestBanner({
+  days,
+  feeCents,
+  closingDate,
+}: {
+  days: RequestableDay[];
+  feeCents: number;
+  closingDate: string | null;
+}) {
+  return (
+    <Card className="border-transparent bg-primary-soft">
+      {closingDate && (
+        <p className="mb-2 text-sm font-medium text-warning">Estamos preparando el reparto del {formatDay(closingDate)}.</p>
+      )}
+      <p className="text-sm text-primary">Pago por envío · {formatEuros(feeCents)} por reparto</p>
+      <p className="font-semibold">¿Qué días quieres tu cesta?</p>
+      <p className="mt-1 text-sm">Pide los repartos que quieras. Puedes pedir o anular hasta la hora de cierre de cada uno.</p>
+      {days.length === 0 ? (
+        <p className="mt-3 text-sm">Ahora mismo no hay repartos abiertos.</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-border rounded-xl bg-surface">
+          {days.map(({ day, requested }) => (
+            <li key={day.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+              <div>
+                <p className="font-semibold first-letter:uppercase">{formatDay(day.date)}</p>
+                <p className="text-xs text-muted">Cierre {formatCutoff(day.cutoff_at)}</p>
+              </div>
+              <DeliveryRequestToggle dayId={day.id} requested={requested} label={formatDay(day.date)} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 function ProductRow({
   product,
   quantity,
+  slot,
   subtitle,
   warning,
 }: {
   product: Product;
   quantity: number;
+  slot: number;
   subtitle?: string;
   warning?: string;
 }) {
@@ -197,7 +295,13 @@ function ProductRow({
           )}
         </div>
         <div className="ml-auto">
-          <QuantityStepper productId={product.id} productName={product.name} unit={product.unit} quantity={quantity} />
+          <QuantityStepper
+            productId={product.id}
+            productName={product.name}
+            unit={product.unit}
+            quantity={quantity}
+            slot={slot}
+          />
         </div>
       </Card>
     </li>
@@ -207,15 +311,19 @@ function ProductRow({
 function BasketView({
   products,
   basket,
+  slot,
   shopName,
   unavailable,
   minOrderCents,
+  deliveryFeeCents,
 }: {
   products: Product[];
   basket: Map<string, number>;
+  slot: number;
   shopName: Map<string, string>;
   unavailable: Set<string>;
   minOrderCents: number;
+  deliveryFeeCents: number;
 }) {
   const inBasket = products.filter((p) => basket.has(p.id));
   const retired = basket.size - inBasket.length;
@@ -236,6 +344,7 @@ function BasketView({
             key={p.id}
             product={p}
             quantity={basket.get(p.id)!}
+            slot={slot}
             subtitle={p.shop_id ? shopName.get(p.shop_id) : undefined}
             warning={unavailable.has(p.id) ? "No lo tiene la tienda de turno del próximo reparto" : undefined}
           />
@@ -248,13 +357,25 @@ function BasketView({
         </p>
       )}
       <Card className="mt-4 space-y-1">
+        {deliveryFeeCents > 0 && (
+          <>
+            <div className="flex items-baseline justify-between text-sm">
+              <span>Productos</span>
+              <span>{formatEuros(total)}</span>
+            </div>
+            <div className="flex items-baseline justify-between text-sm">
+              <span>Envío</span>
+              <span>{formatEuros(deliveryFeeCents)}</span>
+            </div>
+          </>
+        )}
         <div className="flex items-baseline justify-between">
           <span className="font-semibold">Total estimado por reparto</span>
-          <span className="text-xl font-bold">{formatEuros(total)}</span>
+          <span className="text-xl font-bold">{formatEuros(total + deliveryFeeCents)}</span>
         </div>
         <p className="text-sm text-muted">
-          IVA incluido. Lo que va al peso se cobra con el peso real cuando te lo entregamos. La cuota de la suscripción va
-          aparte.
+          IVA incluido. Lo que va al peso se cobra con el peso real cuando te lo entregamos.
+          {deliveryFeeCents === 0 && " La cuota de tu plan va aparte."}
         </p>
         {total < minOrderCents && (
           <p className="text-sm font-medium text-warning">
@@ -270,12 +391,14 @@ function CategoryView({
   category,
   products,
   basket,
+  slot,
   shopName,
   unavailable,
 }: {
   category: ProductCategory;
   products: Product[];
   basket: Map<string, number>;
+  slot: number;
   shopName: Map<string, string>;
   unavailable: Set<string>;
 }) {
@@ -288,7 +411,7 @@ function CategoryView({
     return (
       <ul className="space-y-2">
         {products.map((p) => (
-          <ProductRow key={p.id} product={p} quantity={basket.get(p.id) ?? 0} warning={warning(p)} />
+          <ProductRow key={p.id} product={p} quantity={basket.get(p.id) ?? 0} slot={slot} warning={warning(p)} />
         ))}
       </ul>
     );
@@ -300,7 +423,7 @@ function CategoryView({
       <SectionTitle>{shopName.get(shopId)}</SectionTitle>
       <ul className="space-y-2">
         {items.map((p) => (
-          <ProductRow key={p.id} product={p} quantity={basket.get(p.id) ?? 0} />
+          <ProductRow key={p.id} product={p} quantity={basket.get(p.id) ?? 0} slot={slot} />
         ))}
       </ul>
     </section>

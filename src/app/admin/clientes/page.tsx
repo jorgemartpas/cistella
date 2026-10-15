@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import { BackLink } from "@/components/back-link";
 import { Badge, Card, EmptyState, PageHeader, PageSkeleton, cx, type Tone } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
-import { WEEKDAY_NAMES } from "@/lib/domain/schedule";
-import { FREQUENCY_LABELS, STATUS_LABELS, type SubscriptionStatus } from "@/lib/domain/subscription";
+import { STATUS_LABELS, type SubscriptionStatus } from "@/lib/domain/subscription";
+import { planDescription } from "@/lib/plans";
 import { formatLongDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Subscription } from "@/lib/types";
@@ -90,7 +90,7 @@ async function Customers({ searchParams }: Pick<PageProps<"/admin/clientes">, "s
                   </div>
                   {sub && status !== "sin" && (
                     <p className="text-sm">
-                      {FREQUENCY_LABELS[sub.frequency]}, los {WEEKDAY_NAMES[sub.delivery_weekday]}
+                      {planDescription(sub)}
                       {sub.cancel_at_period_end && " · se da de baja"}
                     </p>
                   )}

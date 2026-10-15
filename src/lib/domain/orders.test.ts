@@ -251,6 +251,27 @@ describe("generación de pedidos por tienda", () => {
     expect(plan.skippedCustomers).toEqual([{ customerId: "sin-confirmar", reason: "sin_confirmar" }]);
   });
 
+  it("con envío automático se prepara sin confirmar, salvo que lo salte", () => {
+    const basket = ["auto", "saltado", "auto-envio"].map((customerId) => ({ customerId, productId: "naranjas", quantity: 1 }));
+    const plan = planOrdersForDay(
+      baseInput({
+        customers: [
+          customer("auto", { confirmed: false, autoDelivery: true }),
+          customer("saltado", { confirmed: false, autoDelivery: true, skipped: true }),
+          // En pago por envío el automático no cuenta: cada reparto se pide
+          customer("auto-envio", {
+            confirmed: false,
+            autoDelivery: true,
+            subscription: { status: "activa", frequency: "por_envio", deliveryWeekday: 2, anchorDate: "2026-10-20" },
+          }),
+        ],
+        basket,
+      }),
+    );
+    expect(plan.orders.map((o) => o.customerId)).toEqual(["auto"]);
+    expect(plan.skippedCustomers).toEqual([{ customerId: "saltado", reason: "saltado" }]);
+  });
+
   it("2 veces por semana: cada día se confirma por separado", () => {
     const plan = planOrdersForDay(
       baseInput({

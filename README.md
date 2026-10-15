@@ -60,6 +60,7 @@ npm run lint
 1. **Supabase:** crea el proyecto (región UE), y desde aquí:
    `npx supabase link --project-ref <ref>` y `npx supabase db push`.
    Carga `supabase/seed.sql` en el SQL Editor si quieres las tiendas y el catálogo de ejemplo.
+   Sin la CLI: pega `supabase/instalacion-completa.sql` (todas las migraciones + el seed) en el SQL Editor y pulsa *Run*.
    En *Authentication → URL Configuration*: Site URL = tu dominio y añade `https://<dominio>/auth/confirm` a Redirect URLs.
    Conviene dejar activada la confirmación de email.
 2. **Stripe (modo test):** crea el precio con `npm run stripe:setup`. Añade un webhook a `https://<dominio>/api/stripe/webhook` con los eventos

@@ -49,6 +49,7 @@ async function Editor({ params }: Pick<PageProps<"/admin/catalogo/[id]">, "param
         categories={isMeat ? ["carne"] : ["fruta", "verdura", "pescado"]}
         defaultCategory={product.category}
         priceInput={centsToInput(product.price_cents)}
+        canMarkSeasonal
       />
 
       {!isMeat && (

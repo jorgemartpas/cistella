@@ -63,8 +63,8 @@ export async function saveProduct(_: ActionState, formData: FormData): Promise<A
     unit: input.unit,
     price_cents: priceCents,
     active: input.active === "on",
-    // «De temporada» solo en el catálogo unificado (fruta, verdura y pescado)
-    seasonal: category !== "carne" && input.seasonal === "on",
+    // «De temporada» solo lo marca el admin (la base de datos tampoco deja a las tiendas)
+    ...(profile.role === "admin" ? { seasonal: input.seasonal === "on" } : {}),
     shop_id: shopId,
   };
 
@@ -101,11 +101,11 @@ export async function setProductActive(productId: string, active: boolean) {
   refresh();
 }
 
-/** Marca o desmarca un producto del catálogo unificado como «De temporada» (sale en la portada). */
+/** Marca o desmarca un producto como «De temporada»: sale en la portada y el primero de su categoría. */
 export async function setProductSeasonal(productId: string, seasonal: boolean) {
   await requireRole("admin");
   const supabase = await createClient();
-  await supabase.from("products").update({ seasonal }).eq("id", productId).neq("category", "carne");
+  await supabase.from("products").update({ seasonal }).eq("id", productId);
   refresh();
 }
 

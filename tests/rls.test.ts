@@ -331,6 +331,28 @@ describe("tienda", () => {
     expect(after!.price_cents).toBe(reinoProduct!.price_cents);
   });
 
+  it("solo el admin marca productos de temporada (las carnicerías no, ni con los suyos)", async () => {
+    const { data: own } = await service
+      .from("products")
+      .select("id, description")
+      .eq("shop_id", SHOP.oskinez)
+      .limit(1)
+      .single();
+    const byShop = await oskinez.from("products").update({ seasonal: true }).eq("id", own!.id);
+    expect(byShop.error?.message).toMatch(/Solo el equipo de Cistella/);
+    const created = await oskinez
+      .from("products")
+      .insert({ shop_id: SHOP.oskinez, category: "carne", name: "Temporada RLS", price_cents: 100, unit: "kg", seasonal: true });
+    expect(created.error?.message).toMatch(/Solo el equipo de Cistella/);
+    // Puede seguir editando su producto sin tocar la temporada
+    const edit = await oskinez.from("products").update({ description: "Casero" }).eq("id", own!.id);
+    expect(edit.error).toBeNull();
+
+    const byAdmin = await admin.from("products").update({ seasonal: true }).eq("id", own!.id).select("seasonal").single();
+    expect(byAdmin.data?.seasonal).toBe(true);
+    await service.from("products").update({ seasonal: false, description: own!.description }).eq("id", own!.id);
+  });
+
   it("la frutería no crea productos y solo marca su propia disponibilidad", async () => {
     const { error } = await fruteriaA.from("products").insert({ category: "fruta", name: "Intrusa", price_cents: 100, unit: "kg" });
     expect(error?.code).toBe("42501");

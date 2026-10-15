@@ -26,5 +26,5 @@ async function Form({ searchParams }: Pick<PageProps<"/admin/catalogo/nuevo">, "
   await requireRole("admin");
   const { categoria } = await searchParams;
   const category = UNIFIED.includes(categoria as ProductCategory) ? (categoria as ProductCategory) : "fruta";
-  return <ProductForm categories={UNIFIED} defaultCategory={category} />;
+  return <ProductForm categories={UNIFIED} defaultCategory={category} canMarkSeasonal />;
 }

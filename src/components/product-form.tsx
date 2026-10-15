@@ -19,12 +19,15 @@ export function ProductForm({
   categories,
   defaultCategory,
   priceInput,
+  canMarkSeasonal = false,
 }: {
   product?: Product;
   categories: ProductCategory[];
   defaultCategory: ProductCategory;
   /** Precio ya formateado para el campo ("3,50") */
   priceInput?: string;
+  /** Solo el admin marca qué es de temporada (sale en la portada) */
+  canMarkSeasonal?: boolean;
 }) {
   return (
     <ActionForm action={saveProduct}>
@@ -75,7 +78,7 @@ export function ProductForm({
           <span className="block text-sm text-muted">Si lo desmarcas, no aparece en el catálogo ni entra en pedidos.</span>
         </span>
       </label>
-      {!categories.includes("carne") && (
+      {canMarkSeasonal && (
         <label className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
           <input
             type="checkbox"
@@ -85,7 +88,9 @@ export function ProductForm({
           />
           <span>
             <span className="block font-medium">De temporada</span>
-            <span className="block text-sm text-muted">Sale en la portada, en «Productos de temporada».</span>
+            <span className="block text-sm text-muted">
+              Sale en la portada, en «Productos de temporada», y el primero de su categoría.
+            </span>
           </span>
         </label>
       )}

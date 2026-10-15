@@ -48,7 +48,7 @@ async function Catalog({ searchParams }: Pick<PageProps<"/admin/catalogo">, "sea
         title="Catálogo"
         subtitle={
           isMeat
-            ? "La carne la gestiona cada carnicería desde su panel. Aquí puedes corregir lo que haga falta."
+            ? "La carne la gestiona cada carnicería desde su panel. Aquí marcas qué es de temporada y corriges lo que haga falta."
             : "Catálogo unificado: tú fijas nombre, foto y precio y qué es de temporada; cada tienda marca si lo tiene."
         }
         action={
@@ -84,7 +84,11 @@ async function Catalog({ searchParams }: Pick<PageProps<"/admin/catalogo">, "sea
                 </Link>
                 <div className="flex flex-wrap gap-2">
                   {isMeat ? (
-                    <ActiveToggle productId={p.id} active={p.active} productName={p.name} />
+                    <>
+                      <ActiveToggle productId={p.id} active={p.active} productName={p.name} />
+                      <span aria-hidden className="mx-1 w-px self-stretch bg-border" />
+                      <SeasonalToggle productId={p.id} seasonal={p.seasonal} productName={p.name} />
+                    </>
                   ) : (
                     <>
                       {shopsOfType.map((s) => (

@@ -39,3 +39,33 @@ export async function updateProfile(_: ActionState, formData: FormData): Promise
   refresh();
   return { ok: "Datos guardados." };
 }
+
+/** Direcciones: teléfono, dirección y código postal de entrega. */
+export async function updateDeliveryDetails(_: ActionState, formData: FormData): Promise<ActionState> {
+  const profile = await requireRole("cliente");
+  const parsed = profileSchema.omit({ full_name: true }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { data: settings } = await supabase.from("settings").select("allowed_postal_codes").single();
+  const allowed: string[] = settings?.allowed_postal_codes ?? ["46600"];
+  if (!allowed.includes(parsed.data.postal_code)) {
+    return { error: `De momento solo repartimos en Alzira (CP ${allowed.join(", ")}).` };
+  }
+  const { error } = await supabase.from("profiles").update(parsed.data).eq("id", profile.id);
+  if (error) return { error: "No se ha podido guardar la dirección. Inténtalo de nuevo." };
+  refresh();
+  return { ok: "Dirección guardada." };
+}
+
+/** Datos personales: nombre y apellidos. */
+export async function updateFullName(_: ActionState, formData: FormData): Promise<ActionState> {
+  const profile = await requireRole("cliente");
+  const parsed = profileSchema.pick({ full_name: true }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update(parsed.data).eq("id", profile.id);
+  if (error) return { error: "No se ha podido guardar el nombre." };
+  refresh();
+  return { ok: "Nombre guardado." };
+}

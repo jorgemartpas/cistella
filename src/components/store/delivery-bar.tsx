@@ -36,7 +36,7 @@ export async function DeliveryBar() {
     tone = "warning";
     content = (
       <>
-        Tu suscripción está pausada: no hay repartos. <BarLink href="/cuenta">Reanudar</BarLink>
+        Tu suscripción está pausada: no hay repartos. <BarLink href="/cuenta/plan">Reanudar</BarLink>
       </>
     );
   } else if (sub.status === "impagada") {

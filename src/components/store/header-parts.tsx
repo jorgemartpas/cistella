@@ -45,10 +45,11 @@ export type MenuItem = { href: string; label: string; icon: IconName };
 
 const CUSTOMER_MENU: MenuItem[] = [
   { href: "/pedidos", label: "Mis pedidos", icon: "list" },
-  { href: "/cuenta", label: "Mi plan", icon: "calendar" },
-  { href: "/cuenta/datos", label: "Datos personales", icon: "user" },
-  { href: "/cuenta/pago", label: "Método de pago", icon: "card" },
-  { href: "/cestas-guardadas", label: "Cestas guardadas", icon: "bookmark" },
+  { href: "/cuenta", label: "Datos personales", icon: "user" },
+  { href: "/cuenta/direcciones", label: "Direcciones", icon: "pin" },
+  { href: "/cuenta/pago", label: "Métodos de pago", icon: "card" },
+  { href: "/cuenta/facturas", label: "Facturas", icon: "file" },
+  { href: "/cuenta/plan", label: "Tu plan", icon: "calendar" },
   { href: "/ayuda", label: "Preguntas frecuentes", icon: "help" },
 ];
 

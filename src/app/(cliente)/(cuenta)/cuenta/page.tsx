@@ -1,158 +1,101 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
-import { PlanPicker } from "@/components/plan-picker";
-import { ActionForm, ConfirmButton, SubmitButton } from "@/components/forms";
-import { Icon } from "@/components/icons";
-import { Badge, ButtonLink, Card, PageHeader, PageSkeleton, SectionTitle, type Tone } from "@/components/ui";
-import { changeSubscription, updatePlan } from "@/lib/actions/subscription";
+import { ActionForm, SubmitButton } from "@/components/forms";
+import { EditableRow } from "@/components/store/editable-row";
+import { Field, Input, PageHeader, PageSkeleton } from "@/components/ui";
+import { changePassword, deleteAccount, updateEmail } from "@/lib/actions/account";
+import { updateFullName } from "@/lib/actions/profile";
 import { requireRole } from "@/lib/auth";
-import { getScheduleRules, nextDeliveryFor } from "@/lib/delivery";
-import { STATUS_LABELS, type SubscriptionStatus } from "@/lib/domain/subscription";
-import { formatDay, formatLongDate } from "@/lib/format";
-import { planDescription, planPriceLabel } from "@/lib/plans";
-import { getStripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabase/server";
-import type { Settings, Subscription } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Mi plan" };
+export const metadata: Metadata = { title: "Datos personales" };
 
-const STATUS_TONES: Record<SubscriptionStatus, Tone> = {
-  activa: "success",
-  pausada: "warning",
-  impagada: "danger",
-  incompleta: "neutral",
-  cancelada: "neutral",
-};
-
-export default function AccountPage() {
+// Portada de «Mi cuenta»
+export default function PersonalDataPage() {
   return (
     <>
-      <PageHeader title="Mi plan" />
+      <PageHeader title="Datos personales" />
       <Suspense fallback={<PageSkeleton />}>
-        <Account />
+        <PersonalData />
       </Suspense>
     </>
   );
 }
 
-async function Account() {
+async function PersonalData() {
   const profile = await requireRole("cliente");
-  const supabase = await createClient();
-  const [{ data: sub }, rules, { data: settings }] = await Promise.all([
-    supabase.from("subscriptions").select("*").eq("customer_id", profile.id).maybeSingle<Subscription>(),
-    getScheduleRules(supabase),
-    supabase.from("settings").select("*").single<Settings>(),
-  ]);
-  const subscribed = sub && ["activa", "pausada", "impagada"].includes(sub.status);
-  const perDelivery = sub?.frequency === "por_envio";
-  const next = sub?.status === "activa" && !perDelivery ? await nextDeliveryFor(supabase, sub, new Date()) : null;
-  const hasStripe = Boolean(getStripe() && sub?.stripe_customer_id);
-
   return (
     <>
-      <SectionTitle>Tu plan</SectionTitle>
-      {!subscribed ? (
-        <Card>
-          <p>No tienes un plan activo.</p>
-          <ButtonLink href="/bienvenida" className="mt-3 w-full">
-            Elegir plan
-          </ButtonLink>
-        </Card>
-      ) : (
-        <Card className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold">{planDescription(sub)}</p>
-              {settings && <p className="text-sm text-muted">{planPriceLabel(settings, sub.frequency)}</p>}
-            </div>
-            <Badge tone={STATUS_TONES[sub.status]}>{STATUS_LABELS[sub.status]}</Badge>
-          </div>
-          {next && (
-            <p className="text-sm text-muted">
-              Próximo reparto: {formatDay(next.date)} ({next.confirmed ? "confirmado" : "sin confirmar"}).
-            </p>
-          )}
-          {perDelivery && <p className="text-sm text-muted">Pides los repartos que quieras desde tu cesta.</p>}
-          {!perDelivery && sub.current_period_end && !sub.cancel_at_period_end && sub.status === "activa" && (
-            <p className="text-sm text-muted">Próxima cuota: {formatLongDate(sub.current_period_end)}.</p>
-          )}
-          {!perDelivery && sub.cancel_at_period_end && (
-            <p className="text-sm font-medium text-warning">
-              Te has dado de baja: seguirás recibiendo repartos hasta el{" "}
-              {sub.current_period_end ? formatLongDate(sub.current_period_end) : "final del periodo pagado"}.
-            </p>
-          )}
+      <div className="card-surface divide-y divide-border px-5">
+        <EditableRow
+          title="Nombre completo"
+          description="Indícanos tu nombre y apellidos para localizarte en relación a tu pedido."
+          value={profile.full_name || "—"}
+        >
+          <ActionForm action={updateFullName}>
+            <Field label="Nombre y apellidos">
+              <Input name="full_name" defaultValue={profile.full_name} autoComplete="name" required minLength={2} />
+            </Field>
+            <SubmitButton className="w-full">Guardar</SubmitButton>
+          </ActionForm>
+        </EditableRow>
 
-          {perDelivery ? (
-            <form action={changeSubscription.bind(null, "cancelar")}>
-              <ConfirmButton
-                variant="danger"
-                className="w-full"
-                message="Se anularán los repartos que tengas pedidos. ¿Darte de baja?"
-              >
-                Darme de baja
-              </ConfirmButton>
-            </form>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {sub.status === "pausada" ? (
-                <form action={changeSubscription.bind(null, "reanudar")}>
-                  <SubmitButton className="w-full" pendingText="Reanudando…">
-                    Reanudar repartos
-                  </SubmitButton>
-                </form>
-              ) : (
-                <form action={changeSubscription.bind(null, "pausar")}>
-                  <ConfirmButton
-                    className="w-full"
-                    message="Mientras esté pausada no recibirás repartos ni se cobrará la cuota. ¿Pausar?"
-                  >
-                    <Icon name="pause" className="size-4" /> Pausar
-                  </ConfirmButton>
-                </form>
-              )}
-              {sub.cancel_at_period_end ? (
-                <form action={changeSubscription.bind(null, "mantener")}>
-                  <SubmitButton variant="secondary" className="w-full">
-                    Seguir suscrito
-                  </SubmitButton>
-                </form>
-              ) : (
-                <form action={changeSubscription.bind(null, "cancelar")}>
-                  <ConfirmButton
-                    variant="danger"
-                    className="w-full"
-                    message="Seguirás recibiendo repartos hasta el final del mes que ya has pagado. ¿Darte de baja?"
-                  >
-                    Darme de baja
-                  </ConfirmButton>
-                </form>
-              )}
-            </div>
-          )}
-          {hasStripe && (
-            <ButtonLink href="/cuenta/pago" variant="ghost" className="w-full">
-              Cambiar tarjeta y ver facturas
-            </ButtonLink>
-          )}
-        </Card>
-      )}
+        <EditableRow
+          title="Email"
+          description="Tu email es también el usuario de acceso a la cuenta."
+          value={profile.email}
+        >
+          <ActionForm action={updateEmail}>
+            <Field label="Email nuevo">
+              <Input name="email" type="email" autoComplete="email" inputMode="email" required />
+            </Field>
+            <SubmitButton className="w-full">Cambiar el email</SubmitButton>
+          </ActionForm>
+        </EditableRow>
 
-      {subscribed && settings && (
-        <>
-          <SectionTitle>Cambiar de plan o de día</SectionTitle>
-          <ActionForm action={updatePlan}>
-            <PlanPicker rules={rules} prices={settings} plan={sub.frequency} weekday={sub.delivery_weekday} />
-            <p className="text-sm text-muted">
-              Si cambias entre planes con cuota, la diferencia se ajusta en tu próxima cuota.
+        <EditableRow title="Métodos de inicio de sesión" description="Cambia tu contraseña o cómo accedes a tu cuenta.">
+          <ActionForm action={changePassword}>
+            <Field label="Contraseña actual">
+              <Input name="current" type="password" autoComplete="current-password" required />
+            </Field>
+            <Field label="Contraseña nueva" hint="Mínimo 8 caracteres">
+              <Input name="password" type="password" autoComplete="new-password" required minLength={8} />
+            </Field>
+            <Field label="Repite la contraseña nueva">
+              <Input name="password_confirm" type="password" autoComplete="new-password" required minLength={8} />
+            </Field>
+            <SubmitButton className="w-full">Cambiar la contraseña</SubmitButton>
+          </ActionForm>
+        </EditableRow>
+
+        <EditableRow
+          title="Eliminar tu cuenta de usuario"
+          description="Se borran tus datos, tu plan y tus cestas. No se puede deshacer."
+          action="Eliminar"
+          danger
+        >
+          <ActionForm action={deleteAccount}>
+            <p className="text-sm">
+              Cancelamos tu cuota y borramos tu cuenta. Los pedidos ya entregados se conservan sin tus datos personales,
+              para las cuentas de las tiendas. Si tienes un pedido en curso, espera a recibirlo.
             </p>
-            <SubmitButton variant="secondary" className="w-full">
-              Guardar cambios
+            <Field label="Escribe ELIMINAR para confirmarlo">
+              <Input name="confirm" autoComplete="off" required />
+            </Field>
+            <SubmitButton variant="danger" className="w-full" pendingText="Eliminando…">
+              Eliminar mi cuenta
             </SubmitButton>
           </ActionForm>
-        </>
-      )}
+        </EditableRow>
+      </div>
 
+      <p className="mt-6 text-sm text-muted">
+        Solo guardamos lo necesario para llevarte la compra. Lee la{" "}
+        <Link href="/privacidad" className="underline">
+          política de privacidad
+        </Link>
+        .
+      </p>
     </>
   );
 }

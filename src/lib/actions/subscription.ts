@@ -249,7 +249,7 @@ export async function updatePlan(_: ActionState, formData: FormData): Promise<Ac
       const stripeCustomerId = sub.stripe_customer_id;
       if (!stripeCustomerId) return { error: "No encontramos tu tarjeta. Escríbenos y lo revisamos." };
       await prepareBaskets(profile.id, sub.frequency, chosen.plan);
-      const url = await checkoutUrl(profile.id, stripeCustomerId, chosen, "/cuenta");
+      const url = await checkoutUrl(profile.id, stripeCustomerId, chosen, "/cuenta/plan");
       if (!url) return { error: "No se ha podido abrir el pago. Inténtalo de nuevo." };
       redirect(url);
     }
@@ -334,7 +334,7 @@ export async function openBillingPortal() {
   const profile = await requireRole("cliente");
   const sub = await currentSubscription(profile.id);
   const stripe = getStripe();
-  if (!stripe || !sub?.stripe_customer_id) redirect("/cuenta");
+  if (!stripe || !sub?.stripe_customer_id) redirect("/cuenta/pago");
   const portal = await stripe.billingPortal.sessions.create({
     customer: sub.stripe_customer_id,
     return_url: `${env.siteUrl}/cuenta/pago`,

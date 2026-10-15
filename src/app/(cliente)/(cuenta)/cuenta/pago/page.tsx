@@ -7,12 +7,12 @@ import { requireRole } from "@/lib/auth";
 import { getStripe, paymentsDemoMode } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Método de pago" };
+export const metadata: Metadata = { title: "Métodos de pago" };
 
 export default function PaymentMethodPage() {
   return (
     <>
-      <PageHeader title="Método de pago" subtitle="La tarjeta con la que pagas la cuota y cada pedido." />
+      <PageHeader title="Métodos de pago" subtitle="La tarjeta con la que pagas la cuota y cada pedido." />
       <Suspense fallback={<PageSkeleton />}>
         <PaymentMethod />
       </Suspense>

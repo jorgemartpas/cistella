@@ -6,12 +6,15 @@ import { signOut } from "@/app/(auth)/actions";
 import { Icon, type IconName } from "../icons";
 import { cx } from "../ui";
 
-const ITEMS: { href: string; label: string; icon: IconName; exact?: boolean }[] = [
+type Item = { href: string; label: string; icon: IconName; exact?: boolean; gapBefore?: boolean };
+
+const ITEMS: Item[] = [
   { href: "/pedidos", label: "Mis pedidos", icon: "list" },
-  { href: "/cuenta", label: "Mi plan", icon: "calendar", exact: true },
-  { href: "/cuenta/datos", label: "Datos personales", icon: "user" },
-  { href: "/cuenta/pago", label: "Método de pago", icon: "card" },
-  { href: "/cestas-guardadas", label: "Cestas guardadas", icon: "bookmark" },
+  { href: "/cuenta", label: "Datos personales", icon: "user", exact: true },
+  { href: "/cuenta/direcciones", label: "Direcciones", icon: "pin" },
+  { href: "/cuenta/pago", label: "Métodos de pago", icon: "card" },
+  { href: "/cuenta/facturas", label: "Facturas", icon: "file" },
+  { href: "/cuenta/plan", label: "Tu plan", icon: "calendar", gapBefore: true },
   { href: "/ayuda", label: "Preguntas frecuentes", icon: "help" },
 ];
 
@@ -29,7 +32,7 @@ export function AccountNavItems({ pathname }: { pathname: string | null }) {
             pathname !== null &&
             (item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
           return (
-            <li key={item.href}>
+            <li key={item.href} className={item.gapBefore ? "md:mt-6" : undefined}>
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}

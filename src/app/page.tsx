@@ -5,6 +5,7 @@ import { Badge, ButtonLink, Card } from "@/components/ui";
 import { FREQUENCY_LABELS, PLAN_ORDER, type DeliveryFrequency } from "@/lib/domain/subscription";
 import { DEFAULT_PRICES, planPriceLabel, type PlanPrices } from "@/lib/plans";
 import { getCurrentProfile } from "@/lib/auth";
+import { PUBLIC_FAQS } from "@/lib/faqs";
 import { createClient } from "@/lib/supabase/server";
 
 const steps = [
@@ -43,24 +44,6 @@ const shops = [
   },
 ];
 
-const faqs = [
-  {
-    q: "¿Cuánto cuesta?",
-    a: "Depende del plan que elijas (mira «Planes»), con IVA incluido. Los productos se pagan aparte, en cada reparto y con el peso real, a la misma tarjeta.",
-  },
-  {
-    q: "¿Qué días repartís?",
-    a: "Martes y viernes. Puedes cambiar tu cesta y confirmar el pedido hasta las 20:00 del día anterior. Eliges si quieres reparto los dos días, uno a la semana, cada dos semanas o solo cuando lo pidas.",
-  },
-  {
-    q: "¿Dónde repartís?",
-    a: "De momento solo en Alzira (código postal 46600).",
-  },
-  {
-    q: "¿Puedo cambiar de plan o darme de baja?",
-    a: "Sí, desde tu cuenta, cuando quieras y sin permanencia.",
-  },
-];
 
 export default function Landing() {
   return (
@@ -143,7 +126,7 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl px-4">
             <h2 className="text-2xl font-bold">Preguntas frecuentes</h2>
             <dl className="mt-6 space-y-3">
-              {faqs.map((faq) => (
+              {PUBLIC_FAQS.map((faq) => (
                 <Card key={faq.q}>
                   <dt className="font-semibold">{faq.q}</dt>
                   <dd className="mt-1 text-muted">{faq.a}</dd>

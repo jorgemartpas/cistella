@@ -327,7 +327,7 @@ export async function openBillingPortal() {
   if (!stripe || !sub?.stripe_customer_id) redirect("/cuenta");
   const portal = await stripe.billingPortal.sessions.create({
     customer: sub.stripe_customer_id,
-    return_url: `${env.siteUrl}/cuenta`,
+    return_url: `${env.siteUrl}/cuenta/pago`,
     locale: "es",
   });
   redirect(portal.url);

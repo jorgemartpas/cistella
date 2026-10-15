@@ -98,8 +98,15 @@ async function Orders() {
       )}
 
       <SectionTitle>Historial</SectionTitle>
-      {history.length === 0 ? (
-        <EmptyState icon="🧾" title="Aún no tienes pedidos entregados" />
+      {orders.length === 0 ? (
+        <EmptyState icon="🧾" title="Aún no has hecho tu primer pedido">
+          <p>Aquí podrás ver el listado de los pedidos que recibas.</p>
+          <ButtonLink href="/categorias" variant="outline" className="mt-5 min-h-10 px-5 py-2 text-[15px]">
+            Inicia tu compra
+          </ButtonLink>
+        </EmptyState>
+      ) : history.length === 0 ? (
+        <p className="text-sm text-muted">Aún no tienes pedidos entregados.</p>
       ) : (
         <ul className="space-y-2">
           {history.map((o) => (

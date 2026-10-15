@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
-import { signOut } from "@/app/(auth)/actions";
-import { ProfileFields } from "@/components/customer-fields";
 import { PlanPicker } from "@/components/plan-picker";
 import { ActionForm, ConfirmButton, SubmitButton } from "@/components/forms";
 import { Icon } from "@/components/icons";
-import { Badge, ButtonLink, Card, PageHeader, PageSkeleton, SectionTitle, buttonStyles, type Tone } from "@/components/ui";
-import { changeSubscription, openBillingPortal, updatePlan } from "@/lib/actions/subscription";
-import { updateProfile } from "@/lib/actions/profile";
+import { Badge, ButtonLink, Card, PageHeader, PageSkeleton, SectionTitle, type Tone } from "@/components/ui";
+import { changeSubscription, updatePlan } from "@/lib/actions/subscription";
 import { requireRole } from "@/lib/auth";
 import { getScheduleRules, nextDeliveryFor } from "@/lib/delivery";
 import { STATUS_LABELS, type SubscriptionStatus } from "@/lib/domain/subscription";
@@ -18,7 +14,7 @@ import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import type { Settings, Subscription } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Mi cuenta" };
+export const metadata: Metadata = { title: "Mi plan" };
 
 const STATUS_TONES: Record<SubscriptionStatus, Tone> = {
   activa: "success",
@@ -31,7 +27,7 @@ const STATUS_TONES: Record<SubscriptionStatus, Tone> = {
 export default function AccountPage() {
   return (
     <>
-      <PageHeader title="Mi cuenta" />
+      <PageHeader title="Mi plan" />
       <Suspense fallback={<PageSkeleton />}>
         <Account />
       </Suspense>
@@ -135,11 +131,9 @@ async function Account() {
             </div>
           )}
           {hasStripe && (
-            <form action={openBillingPortal}>
-              <button type="submit" className={`${buttonStyles.ghost} w-full`}>
-                Cambiar tarjeta y ver facturas
-              </button>
-            </form>
+            <ButtonLink href="/cuenta/pago" variant="ghost" className="w-full">
+              Cambiar tarjeta y ver facturas
+            </ButtonLink>
           )}
         </Card>
       )}
@@ -159,29 +153,6 @@ async function Account() {
         </>
       )}
 
-      <SectionTitle>Datos de entrega</SectionTitle>
-      <ActionForm action={updateProfile}>
-        <p className="text-sm text-muted">Email: {profile.email}</p>
-        <ProfileFields profile={profile} />
-        <SubmitButton variant="secondary" className="w-full">
-          Guardar datos
-        </SubmitButton>
-      </ActionForm>
-
-      <SectionTitle>Privacidad</SectionTitle>
-      <p className="text-sm text-muted">
-        Solo guardamos lo necesario para llevarte la compra. Lee la{" "}
-        <Link href="/privacidad" className="underline">
-          política de privacidad
-        </Link>{" "}
-        o escríbenos si quieres borrar tu cuenta.
-      </p>
-
-      <form action={signOut} className="mt-8">
-        <button type="submit" className={`${buttonStyles.secondary} w-full`}>
-          <Icon name="logout" /> Cerrar sesión
-        </button>
-      </form>
     </>
   );
 }

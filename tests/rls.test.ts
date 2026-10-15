@@ -386,3 +386,92 @@ describe("admin", () => {
     expect(fruSales).toEqual([]);
   });
 });
+
+describe("inventario de las tiendas", () => {
+  const INVENTORY_DATE = "2030-01-08";
+  let invDayId: string;
+  let longanizaId: string;
+  let partId: string;
+  let itemId: string;
+  const stock = async () =>
+    Number(
+      (await service.from("shop_inventory").select("quantity").eq("shop_id", SHOP.oskinez).eq("product_id", longanizaId).single())
+        .data!.quantity,
+    );
+
+  beforeAll(async () => {
+    await service.from("delivery_days").delete().eq("date", INVENTORY_DATE);
+    const { data: day } = await service
+      .from("delivery_days")
+      .insert({ date: INVENTORY_DATE, cutoff_at: "2030-01-07T19:00:00Z" })
+      .select("id")
+      .single();
+    invDayId = day!.id;
+    const { data: product } = await service.from("products").select("id, unit, price_cents").eq("name", "Longaniza fresca").single();
+    longanizaId = product!.id;
+    const { error } = await service.rpc("create_orders_for_day", {
+      p_day_id: invDayId,
+      p_orders: [
+        {
+          customer_id: luciaId,
+          customer_name: "Lucía",
+          phone: "600000000",
+          address: "Calle de prueba 1",
+          postal_code: "46600",
+          estimated_total_cents: 1000,
+          skipped_items: [],
+          shops: [
+            {
+              shop_id: SHOP.oskinez,
+              items: [{ product_id: longanizaId, product_name: "Longaniza fresca", unit: product!.unit, quantity: 1.5, unit_price_cents: product!.price_cents }],
+            },
+          ],
+        },
+      ],
+      p_report: { orders: 1, skippedCustomers: [] },
+    });
+    if (error) throw error;
+    const { data: part } = await service.from("shop_orders").select("id, order_items(id)").eq("delivery_day_id", invDayId).single();
+    partId = part!.id;
+    itemId = (part!.order_items as { id: string }[])[0].id;
+  });
+
+  afterAll(async () => {
+    await service.from("orders").delete().eq("delivery_day_id", invDayId);
+    await service.from("delivery_days").delete().eq("id", invDayId);
+    await service.from("shop_inventory").delete().eq("shop_id", SHOP.oskinez).eq("product_id", longanizaId);
+  });
+
+  it("la tienda apunta su inventario; solo lo ven ella y el admin", async () => {
+    const own = await oskinez
+      .from("shop_inventory")
+      .upsert({ shop_id: SHOP.oskinez, product_id: longanizaId, quantity: 10 }, { onConflict: "shop_id,product_id" });
+    expect(own.error).toBeNull();
+    expect((await oskinez.from("shop_inventory").select("quantity").eq("product_id", longanizaId)).data).toHaveLength(1);
+    expect((await admin.from("shop_inventory").select("quantity").eq("shop_id", SHOP.oskinez)).data!.length).toBeGreaterThan(0);
+
+    expect((await fruteriaA.from("shop_inventory").select("quantity").eq("shop_id", SHOP.oskinez)).data).toEqual([]);
+    expect((await lucia.from("shop_inventory").select("quantity")).data).toEqual([]);
+    expect((await anon.from("shop_inventory").select("quantity")).error).not.toBeNull();
+    const other = await fruteriaA.from("shop_inventory").insert({ shop_id: SHOP.oskinez, product_id: longanizaId, quantity: 99 });
+    expect(other.error?.code).toBe("42501");
+  });
+
+  it("al preparar se resta lo servido (peso real); al reabrir se devuelve; una corrección se ajusta", async () => {
+    await oskinez.from("order_items").update({ quantity_actual: 1.6 }).eq("id", itemId);
+    expect(await stock()).toBe(10); // aún pendiente: no se resta
+    expect((await oskinez.from("shop_orders").update({ status: "preparado" }).eq("id", partId)).error).toBeNull();
+    expect(await stock()).toBe(8.4);
+
+    await oskinez.from("order_items").update({ quantity_actual: 1.4 }).eq("id", itemId);
+    expect(await stock()).toBe(8.6);
+
+    await oskinez.from("shop_orders").update({ status: "pendiente" }).eq("id", partId);
+    expect(await stock()).toBe(10);
+
+    // Recoger sin haber marcado preparado también lo resta, y nunca baja de 0
+    await service.from("shop_inventory").update({ quantity: 1 }).eq("shop_id", SHOP.oskinez).eq("product_id", longanizaId);
+    await admin.from("shop_orders").update({ status: "recogido" }).eq("id", partId);
+    expect(await stock()).toBe(0);
+  });
+});

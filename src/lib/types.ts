@@ -53,6 +53,8 @@ export type Settings = {
   min_order_cents: number;
   default_commission_pct: number;
   weeks_ahead: number;
+  /** Kilos por encima del inventario de una tienda que se aceptan sin avisar en rojo */
+  inventory_margin_kg: number;
 };
 
 export type Subscription = {

@@ -245,10 +245,12 @@ export type CloseResult = { date: ISODate; orders: number; skipped: number };
  * Cierra un día de reparto: convierte en pedidos por tienda las cestas de los clientes que han
  * confirmado ese reparto (idempotente). Los que no lo confirmaron salen en el informe.
  */
-export async function closeDeliveryDay(service: SupabaseClient, dayId: string): Promise<CloseResult | null> {
-  const { data: day } = await service.from("delivery_days").select("*").eq("id", dayId).single<DeliveryDay>();
-  if (!day || day.status !== "abierto" || day.orders_generated_at) return null;
-
+/**
+ * Los pedidos que saldrían de un reparto si se cerrara ahora (con lo confirmado y las cestas de
+ * este momento). Lo usa el cierre y, sin cerrar nada, la previsión del inventario de las tiendas.
+ * Necesita la clave de servicio: lee las cestas de todos los clientes.
+ */
+export async function buildDayPlan(service: SupabaseClient, day: DeliveryDay) {
   const [{ data: subsData, error: subsError }, { data: requestsData }, { data: autoData }, { data: skipsData }] =
     await Promise.all([
       service.from("subscriptions").select("customer_id, status, frequency, delivery_weekday, anchor_date").eq("status", "activa"),
@@ -329,6 +331,13 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
     minOrderCents: settings.data?.min_order_cents ?? 0,
     deliveryFeeCents: settings.data?.delivery_fee_cents ?? 0,
   });
+  return { plan, subs, autoBasket, profileById };
+}
+
+export async function closeDeliveryDay(service: SupabaseClient, dayId: string): Promise<CloseResult | null> {
+  const { data: day } = await service.from("delivery_days").select("*").eq("id", dayId).single<DeliveryDay>();
+  if (!day || day.status !== "abierto" || day.orders_generated_at) return null;
+  const { plan, subs, autoBasket, profileById } = await buildDayPlan(service, day);
 
   const report: GenerationReport = {
     orders: plan.orders.length,

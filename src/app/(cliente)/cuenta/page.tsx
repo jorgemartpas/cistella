@@ -71,7 +71,11 @@ async function Account() {
             </div>
             <Badge tone={STATUS_TONES[sub.status]}>{STATUS_LABELS[sub.status]}</Badge>
           </div>
-          {next && <p className="text-sm text-muted">Próximo reparto: {formatDay(next.date)}.</p>}
+          {next && (
+            <p className="text-sm text-muted">
+              Próximo reparto: {formatDay(next.date)} ({next.confirmed ? "confirmado" : "sin confirmar"}).
+            </p>
+          )}
           {perDelivery && <p className="text-sm text-muted">Pides los repartos que quieras desde tu cesta.</p>}
           {!perDelivery && sub.current_period_end && !sub.cancel_at_period_end && sub.status === "activa" && (
             <p className="text-sm text-muted">Próxima cuota: {formatLongDate(sub.current_period_end)}.</p>

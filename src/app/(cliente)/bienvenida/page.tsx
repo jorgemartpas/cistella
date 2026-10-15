@@ -68,8 +68,8 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
         )}
         {next && (
           <p className="mt-2 text-muted">
-            Tu primer reparto es el <strong className="text-text">{formatDay(next.date)}</strong>. Puedes montar tu
-            cesta hasta el {formatCutoff(next.cutoffAt)}.
+            Tu primer reparto es el <strong className="text-text">{formatDay(next.date)}</strong>. Monta tu cesta y
+            confirma el pedido antes del {formatCutoff(next.cutoffAt)}.
           </p>
         )}
         <ButtonLink href="/cesta" className="mt-6 w-full">

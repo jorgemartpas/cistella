@@ -80,15 +80,22 @@ async function Day({ params }: Pick<PageProps<"/admin/dias/[id]">, "params">) {
   );
 }
 
-function OpenDay({ day, shops }: { day: DeliveryDay; shops: Awaited<ReturnType<typeof getShops>> }) {
+async function OpenDay({ day, shops }: { day: DeliveryDay; shops: Awaited<ReturnType<typeof getShops>> }) {
   const fruterias = shops.filter((s) => s.type === "fruteria");
   const pescaderias = shops.filter((s) => s.type === "pescaderia");
+  const supabase = await createClient();
+  const { count: confirmed } = await supabase
+    .from("delivery_requests")
+    .select("customer_id", { count: "exact", head: true })
+    .eq("delivery_day_id", day.id);
   return (
     <>
-      <p className="mb-4 text-muted">
-        Los clientes pueden cambiar su cesta hasta el <strong className="text-text">{formatCutoff(day.cutoff_at)}</strong>.
-        A esa hora se generan los pedidos de cada tienda.
+      <p className="mb-2 text-muted">
+        Los clientes pueden cambiar su cesta y confirmar el pedido hasta el{" "}
+        <strong className="text-text">{formatCutoff(day.cutoff_at)}</strong>. A esa hora se generan los pedidos de cada
+        tienda con las cestas confirmadas.
       </p>
+      <p className="mb-4 font-semibold">Pedidos confirmados hasta ahora: {confirmed ?? 0}</p>
       <ActionForm action={updateDay}>
         <input type="hidden" name="id" value={day.id} />
         <Field label="Cierre de pedidos (hora de Alzira)">
@@ -127,7 +134,7 @@ function OpenDay({ day, shops }: { day: DeliveryDay; shops: Awaited<ReturnType<t
         <form action={closeDayNow.bind(null, day.id)}>
           <ConfirmButton
             className="w-full"
-            message="Se cierra la cesta de los clientes de este reparto y se generan ya los pedidos de cada tienda. ¿Seguir?"
+            message="Se generan ya los pedidos de los clientes que lo han confirmado; los demás ya no podrán confirmar. ¿Seguir?"
             pendingText="Generando pedidos…"
           >
             Cerrar ahora y generar pedidos

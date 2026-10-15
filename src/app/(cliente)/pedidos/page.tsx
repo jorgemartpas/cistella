@@ -44,10 +44,10 @@ async function Orders() {
   const inProgress = orders.filter((o) => ["pendiente", "preparado", "en_reparto"].includes(o.status));
   const history = orders.filter((o) => !inProgress.includes(o));
   const perDelivery = sub?.frequency === "por_envio";
-  let next: { date: string; cutoffAt: Date } | null = null;
+  let next: { date: string; cutoffAt: Date; confirmed: boolean } | null = null;
   if (sub?.status === "activa" && perDelivery) {
     const requested = (await requestableDays(supabase, profile.id, new Date())).find((d) => d.requested);
-    next = requested ? { date: requested.day.date, cutoffAt: new Date(requested.day.cutoff_at) } : null;
+    next = requested ? { date: requested.day.date, cutoffAt: new Date(requested.day.cutoff_at), confirmed: true } : null;
   } else if (sub?.status === "activa") {
     next = await nextDeliveryFor(supabase, sub, new Date());
   }
@@ -57,12 +57,21 @@ async function Orders() {
       <SectionTitle>Próximo pedido</SectionTitle>
       {next ? (
         <Card>
-          <p className="font-semibold first-letter:uppercase">{formatDay(next.date)}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-semibold first-letter:uppercase">{formatDay(next.date)}</p>
+            <Badge tone={next.confirmed ? "success" : "warning"}>{next.confirmed ? "Confirmado" : "Sin confirmar"}</Badge>
+          </div>
           <p className="text-sm text-muted">
-            Se prepara con tu cesta tal y como esté el {formatCutoff(next.cutoffAt)}.
+            {next.confirmed
+              ? `Se prepara con tu cesta tal y como esté el ${formatCutoff(next.cutoffAt)}.`
+              : `Confírmalo antes del ${formatCutoff(next.cutoffAt)}; si no, ese día no te llevamos nada.`}
           </p>
-          <ButtonLink href="/cesta?ver=cesta" variant="secondary" className="mt-3 w-full">
-            Revisar mi cesta
+          <ButtonLink
+            href={next.confirmed ? "/cesta?ver=cesta" : "/cesta?ver=cesta#confirmar"}
+            variant={next.confirmed ? "secondary" : "primary"}
+            className="mt-3 w-full"
+          >
+            {next.confirmed ? "Revisar mi cesta" : "Revisar y confirmar"}
           </ButtonLink>
         </Card>
       ) : (

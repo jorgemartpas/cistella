@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Icon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
+import { ConfirmOrder } from "@/components/confirm-order";
 import { DeliveryRequestToggle } from "@/components/delivery-request-toggle";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { Badge, ButtonLink, Card, EmptyState, Notice, PageSkeleton, SectionTitle, cx } from "@/components/ui";
@@ -23,7 +24,7 @@ import { WEEKDAY_NAMES } from "@/lib/domain/schedule";
 import { FREQUENCY_LABELS, usesDayBaskets } from "@/lib/domain/subscription";
 import { formatCutoff, formatDay } from "@/lib/format";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import type { Product, Settings, Subscription } from "@/lib/types";
+import type { DeliveryDay, Product, Settings, Subscription } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Mi cesta" };
 
@@ -68,16 +69,27 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
     requestable = await requestableDays(supabase, profile.id, now);
   } else if (isActive) {
     next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
+    // Para poder confirmarlo, el día de reparto tiene que existir
+    if (next && !next.day) {
+      await ensureDeliveryDays(createServiceClient(), now);
+      next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
+    }
   }
   const closing = isActive ? await closingDayFor(supabase, sub, now) : null;
-  const requestedDay = requestable.find((r) => r.requested)?.day ?? null;
-  const upcomingDay = next?.day ?? requestedDay;
-  // No hay que confirmar nada: la cesta se guarda sola y al cierre se convierte en pedido
-  const orderAt: OrderAt | null = requestedDay
-    ? { date: requestedDay.date, cutoffAt: requestedDay.cutoff_at }
-    : next
-      ? { date: next.date, cutoffAt: next.cutoffAt }
-      : null;
+  const firstRequested = requestable.find((r) => r.requested);
+  const upcomingDay = next?.day ?? firstRequested?.day ?? null;
+  // Reparto que se confirma desde la cesta: el próximo que le toca o, en pago por envío,
+  // el primero que ha pedido (o el primero abierto, para pedirlo)
+  const firstRequestable = firstRequested ?? requestable[0];
+  const toConfirm: ToConfirm | null = !isActive
+    ? null
+    : perDelivery
+      ? firstRequestable
+        ? { day: firstRequestable.day, confirmed: firstRequestable.requested }
+        : null
+      : next?.day
+        ? { day: next.day, confirmed: next.confirmed }
+        : null;
   const { data: unavailableIds } = upcomingDay
     ? await supabase.rpc("unavailable_on_day", { p_day_id: upcomingDay.id })
     : { data: [] };
@@ -123,7 +135,12 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
           closingDate={closing?.date ?? null}
         />
       ) : (
-        <DeliveryBanner sub={sub} next={next} closingDate={closing?.date ?? null} />
+        <DeliveryBanner
+          sub={sub}
+          next={next}
+          closingDate={closing?.date ?? null}
+          confirmHref={`${href("cesta")}#confirmar`}
+        />
       )}
 
       <nav aria-label="Secciones de la cesta" className="-mx-4 mb-4 mt-5 overflow-x-auto px-4">
@@ -164,8 +181,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
           unavailable={unavailable}
           minOrderCents={settings?.min_order_cents ?? 0}
           deliveryFeeCents={perDelivery ? (settings?.delivery_fee_cents ?? 0) : 0}
-          orderAt={isActive ? orderAt : null}
-          askForDelivery={isActive && perDelivery && !requestedDay}
+          toConfirm={toConfirm}
         />
       ) : (
         <CategoryView
@@ -185,10 +201,12 @@ function DeliveryBanner({
   sub,
   next,
   closingDate,
+  confirmHref,
 }: {
   sub: Subscription | null;
   next: UpcomingDelivery | null;
   closingDate: string | null;
+  confirmHref: string;
 }) {
   if (!sub || sub.status === "incompleta" || sub.status === "cancelada") {
     return (
@@ -227,9 +245,23 @@ function DeliveryBanner({
         <>
           <p className="text-sm text-primary">Próximo reparto · {FREQUENCY_LABELS[sub.frequency].toLowerCase()}</p>
           <p className="text-xl font-bold first-letter:uppercase">{formatDay(next.date)}</p>
-          <p className="mt-1 text-sm">
-            Puedes cambiar la cesta hasta el <strong>{formatCutoff(next.cutoffAt)}</strong>.
-          </p>
+          {next.confirmed ? (
+            <p className="mt-1 flex items-start gap-1.5 text-sm">
+              <Icon name="check" className="mt-0.5 size-4 shrink-0 text-primary" />
+              <span>
+                <strong>Pedido confirmado.</strong> Puedes cambiar la cesta hasta el{" "}
+                <strong>{formatCutoff(next.cutoffAt)}</strong>.
+              </span>
+            </p>
+          ) : (
+            <p className="mt-1 text-sm">
+              <strong className="text-warning">Sin confirmar.</strong> Revisa tu cesta y confirma el pedido antes del{" "}
+              <strong>{formatCutoff(next.cutoffAt)}</strong>; si no, ese día no te llevamos nada.{" "}
+              <Link href={confirmHref} className="font-semibold underline">
+                Confirmar
+              </Link>
+            </p>
+          )}
         </>
       ) : (
         <p>Ahora mismo no hay repartos programados para tu día. Te avisaremos.</p>
@@ -317,8 +349,8 @@ function ProductRow({
   );
 }
 
-/** Reparto en el que la cesta se convertirá en pedido, y cuándo */
-type OrderAt = { date: string; cutoffAt: Date | string };
+/** Reparto que se confirma desde la cesta */
+type ToConfirm = { day: DeliveryDay; confirmed: boolean };
 
 function BasketView({
   products,
@@ -328,8 +360,7 @@ function BasketView({
   unavailable,
   minOrderCents,
   deliveryFeeCents,
-  orderAt,
-  askForDelivery,
+  toConfirm,
 }: {
   products: Product[];
   basket: Map<string, number>;
@@ -338,15 +369,15 @@ function BasketView({
   unavailable: Set<string>;
   minOrderCents: number;
   deliveryFeeCents: number;
-  orderAt: OrderAt | null;
-  askForDelivery: boolean;
+  toConfirm: ToConfirm | null;
 }) {
   const inBasket = products.filter((p) => basket.has(p.id));
   const retired = basket.size - inBasket.length;
   if (inBasket.length === 0) {
     return (
       <EmptyState icon="🧺" title="Tu cesta está vacía">
-        Añade fruta, verdura, pescado o carne desde las pestañas de arriba. Se repetirá sola en cada reparto.
+        Añade fruta, verdura, pescado o carne desde las pestañas de arriba y después confirma el pedido. La cesta se
+        guarda para los siguientes repartos.
       </EmptyState>
     );
   }
@@ -399,19 +430,15 @@ function BasketView({
           </p>
         )}
       </Card>
-      {(orderAt || askForDelivery) && (
-        <div className="mt-3">
-          <Notice tone="success" title="Tu cesta se guarda sola: no hace falta confirmar">
-            {orderAt ? (
-              <>
-                Al cierre ({formatCutoff(orderAt.cutoffAt)}) se convierte en tu pedido del {formatDay(orderAt.date)}.
-                Hasta entonces puedes cambiarla cuando quieras.
-              </>
-            ) : (
-              "Para recibirla, pide arriba el reparto que quieras."
-            )}
-          </Notice>
-        </div>
+      {toConfirm && (
+        <ConfirmOrder
+          key={toConfirm.day.id}
+          dayId={toConfirm.day.id}
+          confirmed={toConfirm.confirmed}
+          dayLabel={formatDay(toConfirm.day.date)}
+          cutoffLabel={formatCutoff(toConfirm.day.cutoff_at)}
+          note={deliveryFeeCents > 0 ? `Se suman ${formatEuros(deliveryFeeCents)} de envío.` : undefined}
+        />
       )}
     </>
   );

@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 const steps = [
   {
     title: "Monta tu cesta",
-    text: "Fruta, verdura, pescado y la carne de tu carnicería de confianza. Se repite sola en cada reparto y la cambias cuando quieras.",
+    text: "Fruta, verdura, pescado y la carne de tu carnicería de confianza. Se guarda para cada reparto: la cambias si quieres y confirmas el pedido con un toque.",
   },
   {
     title: "Las tiendas la preparan",
@@ -49,7 +49,7 @@ const faqs = [
   },
   {
     q: "¿Qué días repartís?",
-    a: "Martes y viernes. Puedes cambiar tu cesta hasta las 20:00 del día anterior. Eliges si quieres reparto los dos días, uno a la semana, cada dos semanas o solo cuando lo pidas.",
+    a: "Martes y viernes. Puedes cambiar tu cesta y confirmar el pedido hasta las 20:00 del día anterior. Eliges si quieres reparto los dos días, uno a la semana, cada dos semanas o solo cuando lo pidas.",
   },
   {
     q: "¿Dónde repartís?",
@@ -81,7 +81,7 @@ export default function Landing() {
           </h1>
           <p className="mt-4 max-w-xl text-lg text-muted">
             Carne, pescado, fruta y verdura de las tiendas del pueblo, sin ir de tienda en tienda. Monta tu cesta una
-            vez y te la llevamos cada semana.
+            vez, confirma cada pedido con un toque y te lo llevamos a casa.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="/registro" className="sm:px-8">

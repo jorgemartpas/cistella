@@ -74,6 +74,13 @@ async function Dashboard() {
   const nextClosed = upcoming.find((d) => d.status === "cerrado");
   const nextOpen = upcoming.find((d) => d.status === "abierto");
 
+  const { count: confirmed } = nextOpen
+    ? await supabase
+        .from("delivery_requests")
+        .select("customer_id", { count: "exact", head: true })
+        .eq("delivery_day_id", nextOpen.id)
+    : { count: 0 };
+
   let progress: { orders: number; delivered: number } | null = null;
   if (nextClosed) {
     const { data: orders } = await supabase.from("orders").select("status").eq("delivery_day_id", nextClosed.id);
@@ -101,7 +108,9 @@ async function Dashboard() {
         <Card className="mb-3">
           <p className="text-sm text-muted">Siguiente cierre de pedidos</p>
           <p className="font-semibold first-letter:uppercase">{formatCutoff(nextOpen.cutoff_at)}</p>
-          <p className="text-sm text-muted">Para el reparto del {formatDay(nextOpen.date)}.</p>
+          <p className="text-sm text-muted">
+            Para el reparto del {formatDay(nextOpen.date)} · {plural(confirmed ?? 0, "pedido confirmado", "pedidos confirmados")}
+          </p>
         </Card>
       )}
       <div className="grid grid-cols-2 gap-3">

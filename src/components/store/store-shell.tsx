@@ -56,7 +56,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
 
       <main className="pb-nav mx-auto w-full max-w-6xl flex-1 px-4 pt-5 md:pb-10 md:pt-7">{children}</main>
 
-      <footer className="mx-auto hidden w-full max-w-6xl border-t border-border px-4 py-6 text-sm text-muted md:flex md:justify-between">
+      <footer className="mx-auto hidden w-full max-w-6xl border-t border-border px-4 pb-24 pt-6 text-sm text-muted md:flex md:justify-between">
         <p>© Cistella · Alzira</p>
         <div className="flex gap-6">
           <Link href="/ayuda" className="hover:text-text">

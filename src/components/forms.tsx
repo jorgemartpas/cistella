@@ -1,9 +1,17 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useContext, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionState } from "@/lib/types";
 import { buttonStyles, cx } from "./ui";
+
+const PendingContext = createContext(false);
+
+function usePending() {
+  const { pending } = useFormStatus();
+  const actionPending = useContext(PendingContext);
+  return pending || actionPending;
+}
 
 export function SubmitButton({
   children,
@@ -20,7 +28,7 @@ export function SubmitButton({
   name?: string;
   value?: string;
 }) {
-  const { pending } = useFormStatus();
+  const pending = usePending();
   return (
     <button type="submit" name={name} value={value} disabled={pending} className={cx(buttonStyles[variant], className)}>
       {pending ? pendingText : children}
@@ -43,7 +51,10 @@ export function FormMessage({ state }: { state: ActionState }) {
   );
 }
 
-/** Formulario ligado a un Server Action que devuelve { error } o { ok }. */
+/**
+ * Formulario ligado a un Server Action que devuelve { error } o { ok }. Se envía a mano para
+ * que React no vacíe los campos al terminar: si hay un error, el usuario no pierde lo escrito.
+ */
 export function ActionForm({
   action,
   children,
@@ -53,10 +64,19 @@ export function ActionForm({
   children: ReactNode;
   className?: string;
 }) {
-  const [state, formAction] = useActionState(action, undefined);
+  const [state, formAction, pending] = useActionState(action, undefined);
   return (
-    <form action={formAction} className={className}>
-      {children}
+    <form
+      action={formAction}
+      className={className}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        const formData = new FormData(event.currentTarget, submitter);
+        startTransition(() => formAction(formData));
+      }}
+    >
+      <PendingContext value={pending}>{children}</PendingContext>
       <FormMessage state={state} />
     </form>
   );
@@ -76,7 +96,7 @@ export function ConfirmButton({
   className?: string;
   pendingText?: string;
 }) {
-  const { pending } = useFormStatus();
+  const pending = usePending();
   return (
     <button
       type="submit"

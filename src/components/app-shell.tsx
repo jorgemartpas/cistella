@@ -1,4 +1,6 @@
 import { Suspense, type ReactNode } from "react";
+import { signOut } from "@/app/(auth)/actions";
+import { Icon } from "./icons";
 import { Logo } from "./logo";
 import { ActiveNavList, NavList, type NavItem } from "./nav-list";
 
@@ -21,7 +23,19 @@ export function AppShell({
       <header className="sticky top-0 z-20 border-b border-border bg-bg/90 backdrop-blur pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
           <Logo href={homeHref} />
-          {badge && <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">{badge}</span>}
+          <div className="flex items-center gap-1">
+            {badge && <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">{badge}</span>}
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="flex size-10 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-text"
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+              >
+                <Icon name="logout" className="size-5" />
+              </button>
+            </form>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-5 pb-nav">{children}</main>

@@ -38,7 +38,7 @@ async function saveSettings(_: ActionState, formData: FormData): Promise<ActionS
     ["min_order_cents", "Pedido mínimo", parsed.data.min_order.trim() || "0", true],
     ["price_dos_por_semana_cents", "2 veces por semana", parsed.data.price_dos_por_semana, false],
     ["price_semanal_cents", "Cada semana", parsed.data.price_semanal, false],
-    ["price_quincenal_cents", "Cada 2 semanas", parsed.data.price_quincenal, false],
+    ["price_quincenal_cents", "Cada 15 días", parsed.data.price_quincenal, false],
     ["delivery_fee_cents", "Pago por envío", parsed.data.delivery_fee, true],
   ] as const;
   const amounts: Record<string, number> = {};
@@ -106,7 +106,7 @@ async function SettingsForm() {
           <Field label="Cada semana (€/mes)">
             <Input name="price_semanal" inputMode="decimal" defaultValue={centsToInput(settings.price_semanal_cents)} />
           </Field>
-          <Field label="Cada 2 semanas (€/mes)">
+          <Field label="Cada 15 días (€/mes)">
             <Input name="price_quincenal" inputMode="decimal" defaultValue={centsToInput(settings.price_quincenal_cents)} />
           </Field>
           <Field label="Pago por envío (€ por reparto)">

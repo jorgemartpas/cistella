@@ -36,5 +36,5 @@ const WEEKDAYS = ["", "lunes", "martes", "miércoles", "jueves", "viernes", "sá
 export function planDescription(sub: { frequency: DeliveryFrequency; delivery_weekday: number }): string {
   if (sub.frequency === "dos_por_semana") return "2 veces por semana";
   if (sub.frequency === "por_envio") return "Pago por envío";
-  return `${sub.frequency === "semanal" ? "Cada semana" : "Cada 2 semanas"}, los ${WEEKDAYS[sub.delivery_weekday]}`;
+  return `${sub.frequency === "semanal" ? "Cada semana" : "Cada 15 días"}, los ${WEEKDAYS[sub.delivery_weekday]}`;
 }

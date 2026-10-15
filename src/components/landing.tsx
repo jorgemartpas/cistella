@@ -173,7 +173,7 @@ async function AccountLink() {
 const PLAN_TEXT: Record<DeliveryFrequency, string> = {
   dos_por_semana: "Martes y viernes, con una cesta distinta para cada día.",
   semanal: "Un reparto a la semana, el día que elijas.",
-  quincenal: "Un reparto cada dos semanas.",
+  quincenal: "Un reparto cada 15 días.",
   por_envio: "Sin cuota. Pides solo los repartos que quieras.",
 };
 

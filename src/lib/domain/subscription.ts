@@ -15,7 +15,7 @@ export const PLAN_ORDER: DeliveryFrequency[] = ["dos_por_semana", "semanal", "qu
 export const FREQUENCY_LABELS: Record<DeliveryFrequency, string> = {
   dos_por_semana: "2 veces por semana",
   semanal: "Cada semana",
-  quincenal: "Cada 2 semanas",
+  quincenal: "Cada 15 días",
   por_envio: "Pago por envío",
 };
 

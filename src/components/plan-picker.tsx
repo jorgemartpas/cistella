@@ -40,7 +40,7 @@ export function PlanPicker({
   const descriptions: Record<DeliveryFrequency, string> = {
     dos_por_semana: `Todos los repartos (${days}), con una cesta distinta para cada día.`,
     semanal: "Un reparto a la semana, el día que elijas.",
-    quincenal: "Un reparto cada dos semanas, el día que elijas.",
+    quincenal: "Un reparto cada 15 días, el día que elijas (uno sí y otro no).",
     por_envio: "Sin cuota mensual. Pides solo los repartos que quieras y pagas el envío de cada uno.",
   };
 

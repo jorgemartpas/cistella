@@ -12,7 +12,7 @@ export const PUBLIC_FAQS: Faq[] = [
   },
   {
     q: "¿Qué días repartís?",
-    a: "Martes y viernes. Puedes cambiar tu cesta y confirmar el pedido hasta las 20:00 del día anterior. Eliges si quieres reparto los dos días, uno a la semana, cada dos semanas o solo cuando lo pidas.",
+    a: "Martes y viernes. Puedes cambiar tu cesta y confirmar el pedido hasta las 20:00 del día anterior. Eliges si quieres reparto los dos días, uno a la semana, cada 15 días o solo cuando lo pidas.",
   },
   {
     q: "¿Dónde repartís?",

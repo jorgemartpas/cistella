@@ -39,6 +39,7 @@ export type Product = {
   price_cents: number;
   unit: ProductUnit;
   active: boolean;
+  created_at: string;
 };
 
 export type Settings = {
@@ -142,3 +143,15 @@ export type OrderItem = {
 
 /** Resultado de un Server Action de formulario */
 export type ActionState = { error?: string; ok?: string } | undefined;
+
+/** Lista de productos o cesta completa guardada por el cliente */
+export type SavedList = {
+  id: string;
+  customer_id: string;
+  kind: "lista" | "cesta";
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SavedListItem = { list_id: string; product_id: string; quantity: number | null };

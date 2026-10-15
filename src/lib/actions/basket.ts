@@ -2,44 +2,24 @@
 
 import { refresh } from "next/cache";
 import { requireRole } from "@/lib/auth";
-import { closingDayFor, getScheduleRules, toCadence } from "@/lib/delivery";
+import { cookies } from "next/headers";
+import { basketLockReason } from "@/lib/basket-rules";
+import { BASKET_DAY_COOKIE } from "@/lib/client-context";
+import { toCadence } from "@/lib/delivery";
 import { normalizeQuantity, type ProductUnit } from "@/lib/domain/money";
-import { basketSlotFor, isDueOn, usesDayBaskets } from "@/lib/domain/subscription";
+import { basketSlotFor, isDueOn } from "@/lib/domain/subscription";
 import { createClient } from "@/lib/supabase/server";
 import type { Subscription } from "@/lib/types";
 
-const DATE_FORMAT = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-
 /**
  * Cambia la cantidad de un producto en la cesta (0 lo quita). `slot` es la cesta: 0 la única,
- * o el día de la semana en el plan de 2 veces por semana. Mientras se cierra un reparto del
- * cliente (entre la hora de cierre y la generación de pedidos) no se puede tocar.
+ * o el día de la semana en el plan de 2 veces por semana.
  */
 export async function setBasketQuantity(productId: string, quantity: number, slot = 0): Promise<{ error?: string }> {
   const profile = await requireRole("cliente");
   const supabase = await createClient();
-
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("customer_id", profile.id)
-    .maybeSingle<Subscription>();
-
-  if (sub && usesDayBaskets(sub.frequency)) {
-    const rules = await getScheduleRules(supabase);
-    if (!rules.some((r) => r.active && r.weekday === slot)) return { error: "Elige la cesta de un día de reparto." };
-  } else if (slot !== 0) {
-    return { error: "Tu plan tiene una sola cesta." };
-  }
-
-  if (sub?.status === "activa") {
-    const closing = await closingDayFor(supabase, sub, new Date());
-    if (closing) {
-      return {
-        error: `Estamos cerrando el reparto del ${DATE_FORMAT.format(new Date(closing.date))}. En unos minutos podrás cambiar la cesta para el siguiente.`,
-      };
-    }
-  }
+  const locked = await basketLockReason(supabase, profile.id, slot);
+  if (locked) return { error: locked };
 
   if (quantity <= 0) {
     await supabase
@@ -103,4 +83,12 @@ export async function confirmDelivery(dayId: string, confirmed: boolean): Promis
   if (error && error.code !== "23505") return { error: "Ese reparto ya está cerrado." };
   refresh();
   return {};
+}
+
+/** Plan de 2 veces por semana: elige qué cesta (la de qué día) se está llenando. */
+export async function chooseBasketDay(weekday: number): Promise<void> {
+  await requireRole("cliente");
+  if (!Number.isInteger(weekday) || weekday < 1 || weekday > 7) return;
+  (await cookies()).set(BASKET_DAY_COOKIE, String(weekday), { path: "/", maxAge: 60 * 60 * 24 * 180, sameSite: "lax" });
+  refresh();
 }

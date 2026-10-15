@@ -13,9 +13,15 @@ const BACKGROUNDS: Record<ProductCategory, string> = {
 export function ProductImage({
   product,
   className = "size-16",
+  iconClassName = "text-3xl",
+  neutral = false,
 }: {
   product: { name: string; image_url: string | null; category: ProductCategory };
   className?: string;
+  /** Tamaño del icono cuando no hay foto */
+  iconClassName?: string;
+  /** Fondo gris claro en lugar del color de la categoría (tarjetas de producto) */
+  neutral?: boolean;
 }) {
   if (product.image_url) {
     return (
@@ -32,7 +38,12 @@ export function ProductImage({
   return (
     <div
       aria-hidden
-      className={cx("flex shrink-0 items-center justify-center rounded-lg text-3xl", BACKGROUNDS[product.category], className)}
+      className={cx(
+        "flex shrink-0 items-center justify-center rounded-lg",
+        iconClassName,
+        neutral ? "bg-surface-2" : BACKGROUNDS[product.category],
+        className,
+      )}
     >
       {ICONS[product.category]}
     </div>

@@ -3,7 +3,20 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabasePublicConfig } from "@/lib/supabase/config";
 
 // Rutas que exigen sesión. El rol concreto se comprueba en cada página (src/lib/auth.ts).
-const PROTECTED = ["/inicio", "/bienvenida", "/cesta", "/pedidos", "/cuenta", "/tienda", "/admin"];
+const PROTECTED = [
+  "/inicio",
+  "/portada",
+  "/bienvenida",
+  "/cesta",
+  "/categorias",
+  "/buscar",
+  "/listas",
+  "/pedidos",
+  "/cuenta",
+  "/ayuda",
+  "/tienda",
+  "/admin",
+];
 
 /** Refresca la sesión de Supabase en cada navegación y manda a /entrar si falta. */
 export async function proxy(request: NextRequest) {
@@ -38,6 +51,16 @@ export async function proxy(request: NextRequest) {
     url.search = "";
     url.searchParams.set("volver", path);
     return NextResponse.redirect(url);
+  }
+
+  // La portada de un cliente con sesión es su tienda (la URL sigue siendo "/")
+  if (isLoggedIn && path === "/") {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", data!.claims.sub).maybeSingle();
+    if (profile?.role === "cliente") {
+      const rewrite = NextResponse.rewrite(new URL("/portada", request.url), { request });
+      for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
+      return rewrite;
+    }
   }
 
   return response;

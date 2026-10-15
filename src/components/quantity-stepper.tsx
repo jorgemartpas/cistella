@@ -18,6 +18,7 @@ export function QuantityStepper({
   unit,
   quantity,
   slot = 0,
+  variant = "row",
 }: {
   productId: string;
   productName: string;
@@ -25,12 +26,15 @@ export function QuantityStepper({
   quantity: number;
   /** Cesta: 0 la única, o el día de la semana (plan de 2 veces por semana) */
   slot?: number;
+  /** "card": a todo el ancho, para las tarjetas de producto */
+  variant?: "row" | "card";
 }) {
   const [pending, startTransition] = useTransition();
   const [optimistic, setOptimistic] = useOptimistic(quantity);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const step = quantityStep(unit);
+  const card = variant === "card";
 
   const change = (next: number) => {
     const value = Math.max(0, normalizeQuantity(next, unit));
@@ -54,9 +58,12 @@ export function QuantityStepper({
 
   if (editing) {
     return (
-      <div className="flex flex-col items-end gap-1">
+      <div className={cx("flex flex-col gap-1", card ? "items-stretch" : "items-end")}>
         <form
-          className="inline-flex items-center gap-1 rounded-full border border-primary bg-surface pl-3"
+          className={cx(
+            "inline-flex items-center gap-1 rounded-full border border-primary bg-surface pl-3",
+            card && "justify-end",
+          )}
           onSubmit={(e) => {
             e.preventDefault();
             submitTyped(String(new FormData(e.currentTarget).get("quantity") ?? ""));
@@ -93,19 +100,28 @@ export function QuantityStepper({
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className={cx("flex flex-col gap-1", card ? "items-stretch" : "items-end")}>
       {optimistic === 0 ? (
         <button
           type="button"
           onClick={() => change(unit === "kg" ? 0.5 : 1)}
-          className="inline-flex min-h-10 items-center gap-1 rounded-full bg-primary px-4 text-sm font-semibold text-primary-ink"
+          className={cx(
+            "inline-flex min-h-10 items-center justify-center gap-1 rounded-full px-4 text-sm font-semibold",
+            card
+              ? "w-full border border-primary text-primary hover:bg-primary-soft"
+              : "bg-primary text-primary-ink",
+          )}
           aria-label={`Añadir ${productName}`}
         >
-          <Icon name="plus" className="size-4" /> Añadir
+          <Icon name="plus" className="size-4" /> {card ? "Añadir a la cesta" : "Añadir"}
         </button>
       ) : (
         <div
-          className={cx("inline-flex items-center rounded-full border border-border bg-surface", pending && "opacity-80")}
+          className={cx(
+            "inline-flex items-center rounded-full border bg-surface",
+            card ? "w-full justify-between border-primary bg-primary-soft" : "border-border",
+            pending && "opacity-80",
+          )}
           role="group"
           aria-label={`Cantidad de ${productName}`}
         >

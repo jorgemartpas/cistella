@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TRIAL_COPY } from "@/lib/plans";
 import { ButtonLink } from "../ui";
 
@@ -26,9 +27,14 @@ export function TrialBanner({ isGuest }: { isGuest: boolean }) {
           {TRIAL_COPY.after}
         </p>
       </div>
-      <ButtonLink href={isGuest ? "/categorias" : "/bienvenida"} className="shrink-0 sm:px-6">
-        {isGuest ? "Empezar a comprar" : "Empezar la prueba"}
-      </ButtonLink>
+      <div className="flex shrink-0 flex-col items-center gap-2">
+        <ButtonLink href={isGuest ? "/categorias" : "/bienvenida"} className="w-full sm:px-6">
+          {isGuest ? "Empezar a comprar" : "Empezar la prueba"}
+        </ButtonLink>
+        <Link href="/como-funciona" className="text-sm font-semibold text-primary underline underline-offset-2">
+          Cómo funciona y precios
+        </Link>
+      </div>
     </section>
   );
 }

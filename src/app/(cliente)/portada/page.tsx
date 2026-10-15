@@ -51,8 +51,8 @@ async function StoreHome() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <DeliveryBar />
-      {ctx.trialOffer && <TrialBanner isGuest={ctx.isGuest} />}
+      {/* Quien aún puede probarlo ve solo el gancho de la prueba; con plan, la barra de su próximo reparto */}
+      {ctx.trialOffer ? <TrialBanner isGuest={ctx.isGuest} /> : <DeliveryBar />}
 
       <StoreSection title="Productos de temporada" subtitle="Lo mejor de cada época en las tiendas de Alzira">
         <SeasonHero highlight={highlight} href={`/categorias/${highlight.category}`} />

@@ -4,7 +4,7 @@ import { cx } from "../ui";
 /** Pestañas con la raya verde debajo de la activa. */
 export function Tabs({ tabs, current }: { tabs: { href: string; label: string; key: string }[]; current: string }) {
   return (
-    <nav className="-mx-4 mb-8 overflow-x-auto px-4 md:mx-0 md:px-0">
+    <nav className="-mx-4 -mt-2 mb-4 overflow-x-auto px-4 pb-4 pt-2 md:mx-0 md:overflow-visible md:px-0">
       <ul className="flex gap-2">
         {tabs.map((tab) => (
           <li key={tab.key}>

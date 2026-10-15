@@ -22,7 +22,7 @@ export function AccountNav() {
 
 export function AccountNavItems({ pathname }: { pathname: string | null }) {
   return (
-    <nav aria-label="Mi cuenta" className="-mx-4 mb-6 overflow-x-auto px-4 md:mx-0 md:mb-0 md:overflow-visible md:px-0">
+    <nav aria-label="Mi cuenta" className="-mx-4 -mt-2 mb-2 overflow-x-auto px-4 pb-4 pt-2 md:mx-0 md:mb-0 md:overflow-visible md:px-0">
       <ul className="flex gap-2 md:flex-col md:gap-1">
         {ITEMS.map((item) => {
           const active =

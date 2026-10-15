@@ -43,7 +43,7 @@ async function Category({ params }: Pick<PageProps<"/categorias/[categoria]">, "
 
   return (
     <div className="md:grid md:grid-cols-[13rem_1fr] md:gap-8">
-      <nav aria-label="Categorías" className="-mx-4 mb-5 overflow-x-auto px-4 md:mx-0 md:mb-0 md:px-0">
+      <nav aria-label="Categorías" className="-mx-4 -mt-2 mb-1 overflow-x-auto px-4 pb-4 pt-2 md:mx-0 md:mb-0 md:overflow-visible md:px-0">
         <ul className="flex gap-2 md:sticky md:top-24 md:flex-col md:gap-0.5">
           {CATEGORY_ORDER.map((c) => (
             <li key={c}>

@@ -1,4 +1,4 @@
-# Cistella
+# LaCistella
 
 Web app de suscripción que lleva a casa la compra de las carnicerías, pescaderías y fruterías de Alzira.
 Piloto v1 con 6 tiendas. Especificación en [SPEC.md](./SPEC.md); decisiones tomadas y pendientes en

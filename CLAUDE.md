@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Cistella: notas para trabajar en el proyecto
+# LaCistella: notas para trabajar en el proyecto
 
 - Interfaz en castellano, precios en euros con IVA incluido, mobile-first. Fechas de reparto como `YYYY-MM-DD` y horas en `Europe/Madrid` (`src/lib/domain/dates.ts`).
 - Las reglas de negocio van en `src/lib/domain/` como funciones puras, con tests (`npm test`). La spec pide tests para la generación de pedidos y la rotación.

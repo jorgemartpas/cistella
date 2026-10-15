@@ -16,7 +16,7 @@ export default function ShopSalesPage() {
     <>
       <PageHeader
         title="Ventas y ganancias"
-        subtitle="Lo que ha recogido el reparto en tu tienda, con el peso real e IVA incluido. Tus ganancias son tus ventas menos la comisión de Cistella."
+        subtitle="Lo que ha recogido el reparto en tu tienda, con el peso real e IVA incluido. Tus ganancias son tus ventas menos la comisión de LaCistella."
       />
       <Suspense fallback={<PageSkeleton />}>
         <Sales />
@@ -105,7 +105,7 @@ async function Sales() {
       <SectionTitle>Cómo se calcula</SectionTitle>
       <p className="text-sm text-muted">
         Cuenta como venta cada pedido que el reparto recoge en tu tienda, con la cantidad real que indicaste y el precio de
-        Cistella (IVA incluido), aunque luego el cliente no estuviera en casa. La comisión acordada es el {pctLabel} de lo
+        LaCistella (IVA incluido), aunque luego el cliente no estuviera en casa. La comisión acordada es el {pctLabel} de lo
         vendido en el mes; el resto son tus ganancias.
       </p>
     </>

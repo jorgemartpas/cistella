@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Cistella · La compra de Alzira, a casa",
-    short_name: "Cistella",
+    name: "LaCistella · La compra de Alzira, a casa",
+    short_name: "LaCistella",
     description: "Fruta, verdura, carne y pescado de las tiendas de Alzira con reparto periódico a domicilio.",
     lang: "es",
     dir: "ltr",

@@ -59,7 +59,7 @@ async function ShopEditor({ params }: Pick<PageProps<"/admin/tiendas/[id]">, "pa
           </ActionForm>
         ) : (
           <ActionForm action={createShopAccount}>
-            <p className="text-sm text-muted">Esta tienda aún no puede entrar en Cistella. Crea su cuenta:</p>
+            <p className="text-sm text-muted">Esta tienda aún no puede entrar en LaCistella. Crea su cuenta:</p>
             <input type="hidden" name="shop_id" value={shop.id} />
             <Field label="Email">
               <Input name="email" type="email" autoComplete="off" required />

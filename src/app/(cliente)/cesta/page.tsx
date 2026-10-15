@@ -57,7 +57,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
       </p>
       {confirmar === "1" && ctx.isActive && (
         <div className="mb-6">
-          <Notice tone="success" title="¡Bienvenida a Cistella! Tu plan ya está activo.">
+          <Notice tone="success" title="¡Bienvenida a LaCistella! Tu plan ya está activo.">
             Confirmamos tu primer pedido con esta cesta. Puedes seguir cambiándola hasta la hora de cierre.
           </Notice>
         </div>

@@ -5,13 +5,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Cistella · La compra del mercado de Alzira, a casa",
-    template: "%s · Cistella",
+    default: "LaCistella · La compra del mercado de Alzira, a casa",
+    template: "%s · LaCistella",
   },
   description:
     "Fruta, verdura, carne y pescado de las tiendas de Alzira con reparto a domicilio. Planes desde 16 €/mes o pago por envío.",
-  applicationName: "Cistella",
-  appleWebApp: { capable: true, title: "Cistella", statusBarStyle: "default" },
+  applicationName: "LaCistella",
+  appleWebApp: { capable: true, title: "LaCistella", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 

@@ -42,7 +42,7 @@ export function planDescription(sub: { frequency: DeliveryFrequency; delivery_we
 /** Textos de la prueba gratis (todos los sitios dicen lo mismo) */
 export const TRIAL_COPY = {
   badge: "2 semanas gratis",
-  title: "Prueba Cistella 2 semanas gratis",
+  title: "Prueba LaCistella 2 semanas gratis",
   rule: "Sin cuota durante 2 semanas o tus 2 primeros pedidos, lo que llegue antes.",
   after: "Después, la cuota se cobra sola cada mes. Si te das de baja antes, no pagas ninguna cuota.",
   products: "Los productos se pagan siempre, al entregarlos, con el peso real.",

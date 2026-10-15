@@ -53,7 +53,7 @@ test("ciclo completo: el visitante llena la cesta, crea la cuenta al confirmar, 
   await main(page).getByRole("radio", { name: /^Cada semana/ }).check();
   await main(page).getByRole("radio", { name: /^Martes/ }).check();
   // Los planes con cuota empiezan con la prueba gratis
-  await expect(main(page).getByText("Prueba Cistella 2 semanas gratis")).toBeVisible();
+  await expect(main(page).getByText("Prueba LaCistella 2 semanas gratis")).toBeVisible();
   await main(page).getByRole("button", { name: /Empezar mi prueba gratis/ }).click();
 
   // Vuelve a su cesta (la que llenó sin cuenta) y el pedido queda confirmado solo

@@ -45,7 +45,7 @@ const shops = [
 ];
 
 
-/** Página informativa: qué es Cistella, cómo funciona, planes y preguntas frecuentes. */
+/** Página informativa: qué es LaCistella, cómo funciona, planes y preguntas frecuentes. */
 export function Landing() {
   return (
     <div className="min-h-dvh">
@@ -155,7 +155,7 @@ export function Landing() {
       </main>
 
       <footer className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-8 text-sm text-muted sm:flex-row sm:justify-between">
-        <p>Cistella · Alzira</p>
+        <p>LaCistella · Alzira</p>
         <Link href="/privacidad" className="underline underline-offset-2">
           Política de privacidad
         </Link>

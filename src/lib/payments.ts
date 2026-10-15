@@ -92,7 +92,7 @@ export async function chargeOrder(service: SupabaseClient, orderId: string): Pro
         payment_method: paymentMethod,
         off_session: true,
         confirm: true,
-        description: `Cistella · pedido del ${order.delivery_days.date}`,
+        description: `LaCistella · pedido del ${order.delivery_days.date}`,
         metadata: { order_id: order.id },
       },
       { idempotencyKey: `order-${order.id}-${claimed.payment_attempts + 1}` },

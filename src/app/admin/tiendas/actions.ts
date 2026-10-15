@@ -82,7 +82,7 @@ async function createAccount(
     user_metadata: { full_name: shopName },
   });
   if (error || !data.user) {
-    return { error: /already/i.test(error?.message ?? "") ? "Ese email ya tiene una cuenta en Cistella." : "No se ha podido crear la cuenta." };
+    return { error: /already/i.test(error?.message ?? "") ? "Ese email ya tiene una cuenta en LaCistella." : "No se ha podido crear la cuenta." };
   }
   const { error: profileError } = await service
     .from("profiles")

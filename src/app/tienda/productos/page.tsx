@@ -86,7 +86,7 @@ async function UnifiedAvailability({ shop }: { shop: Shop }) {
     <>
       <PageHeader
         title="Qué tienes"
-        subtitle="Cistella fija los productos y los precios. Marca lo que tienes: solo te llegarán pedidos de eso los días que te toque."
+        subtitle="LaCistella fija los productos y los precios. Marca lo que tienes: solo te llegarán pedidos de eso los días que te toque."
       />
       {missing > 0 && (
         <p className="mb-2 text-sm font-medium text-warning">

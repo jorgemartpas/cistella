@@ -49,7 +49,7 @@ async function PaymentMethod() {
             </form>
           </>
         ) : paymentsDemoMode() ? (
-          <p>Ahora mismo Cistella está en modo de prueba: no se guarda ninguna tarjeta ni se cobra nada.</p>
+          <p>Ahora mismo LaCistella está en modo de prueba: no se guarda ninguna tarjeta ni se cobra nada.</p>
         ) : (
           <>
             <p>Cuando elijas tu plan, guardaremos aquí tu tarjeta.</p>

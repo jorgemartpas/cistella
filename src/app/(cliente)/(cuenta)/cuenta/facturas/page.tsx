@@ -109,7 +109,7 @@ async function Invoices() {
             </form>
           </>
         ) : paymentsDemoMode() ? (
-          <p className="text-muted">Ahora mismo Cistella está en modo de prueba: no se cobra ninguna cuota.</p>
+          <p className="text-muted">Ahora mismo LaCistella está en modo de prueba: no se cobra ninguna cuota.</p>
         ) : (
           <p className="text-muted">Cuando tengas un plan con cuota, aquí podrás ver sus facturas.</p>
         )}

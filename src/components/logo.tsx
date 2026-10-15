@@ -19,7 +19,7 @@ export function Logo({ href = "/" }: { href?: string }) {
   return (
     <Link href={href} className="inline-flex items-center gap-2 font-bold text-lg tracking-tight">
       <LogoMark className="size-8" />
-      Cistella
+      LaCistella
     </Link>
   );
 }

@@ -22,9 +22,9 @@ export function StoreShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 bg-surface/95 pt-[env(safe-area-inset-top)] shadow-[0_8px_30px_-18px_rgb(16_40_28/0.3)] backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 md:h-[72px] md:gap-8">
-          <Link href="/" aria-label="Cistella, inicio" className="flex shrink-0 items-center gap-2">
+          <Link href="/" aria-label="LaCistella, inicio" className="flex shrink-0 items-center gap-2">
             <LogoMark className="size-10 md:size-11" />
-            <span className="hidden text-lg font-bold tracking-tight lg:inline">Cistella</span>
+            <span className="hidden text-lg font-bold tracking-tight lg:inline">LaCistella</span>
           </Link>
           <Form action="/buscar" className="relative hidden max-w-xs flex-1 md:block" role="search">
             <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted" />
@@ -57,7 +57,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
       <main className="pb-nav mx-auto w-full max-w-6xl flex-1 px-4 pt-5 md:pb-10 md:pt-7">{children}</main>
 
       <footer className="mx-auto hidden w-full max-w-6xl border-t border-border px-4 pb-24 pt-6 text-sm text-muted md:flex md:justify-between">
-        <p>© Cistella · Alzira</p>
+        <p>© LaCistella · Alzira</p>
         <div className="flex gap-6">
           <Link href="/ayuda" className="hover:text-text">
             Preguntas frecuentes

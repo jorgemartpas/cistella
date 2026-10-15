@@ -16,7 +16,7 @@ export type MonthEarnings = {
   orders: ShopSale[];
   salesCents: number;
   commissionCents: number;
-  /** Lo que gana la tienda: ventas menos la comisión de Cistella */
+  /** Lo que gana la tienda: ventas menos la comisión de LaCistella */
   earningsCents: number;
 };
 

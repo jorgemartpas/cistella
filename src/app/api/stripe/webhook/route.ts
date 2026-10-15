@@ -3,7 +3,7 @@ import { env } from "@/lib/env";
 import { completeCardSetup, getStripe, syncStripeSubscription } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/server";
 
-// Stripe → Cistella: estado de las suscripciones y resultado de los cobros de pedidos.
+// Stripe → LaCistella: estado de las suscripciones y resultado de los cobros de pedidos.
 export async function POST(request: Request) {
   const stripe = getStripe();
   const secret = env.stripe.webhookSecret;

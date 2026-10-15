@@ -3,7 +3,7 @@ import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = { title: "Política de privacidad" };
 
-// Texto base para el piloto. Lo marcado entre corchetes lo tiene que completar Cistella
+// Texto base para el piloto. Lo marcado entre corchetes lo tiene que completar LaCistella
 // (y conviene que lo revise un asesor antes del lanzamiento).
 export default function PrivacyPage() {
   return (
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
 
         <h2>Quién trata tus datos</h2>
         <p>
-          [Nombre o razón social de Cistella], con NIF [NIF] y domicilio en [dirección], Alzira (Valencia). Contacto:
+          [Nombre o razón social de LaCistella], con NIF [NIF] y domicilio en [dirección], Alzira (Valencia). Contacto:
           [email de contacto].
         </p>
 
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
           <li>Tu cesta, tus pedidos y el estado de tu suscripción.</li>
         </ul>
         <p>
-          Los datos de tu tarjeta no pasan por Cistella: los gestiona directamente Stripe, nuestro proveedor de pagos.
+          Los datos de tu tarjeta no pasan por LaCistella: los gestiona directamente Stripe, nuestro proveedor de pagos.
         </p>
 
         <h2>Para qué los usamos</h2>

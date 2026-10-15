@@ -11,7 +11,7 @@ export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
   return (
     <>
       <h1 className="text-2xl font-bold">Entrar</h1>
-      <p className="mt-1 text-muted">Clientes, tiendas y equipo de Cistella.</p>
+      <p className="mt-1 text-muted">Clientes, tiendas y equipo de LaCistella.</p>
       <ActionForm action={signIn} className="mt-6 space-y-4">
         <Suspense>
           <ReturnTo searchParams={searchParams} />

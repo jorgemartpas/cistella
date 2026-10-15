@@ -13,7 +13,7 @@ const migrations = fs
 const parts = [...migrations, "supabase/seed.sql"].map(
   (file) => `-- ════════ ${file} ════════\n\n${fs.readFileSync(path.join(root, file), "utf8").trim()}\n`,
 );
-const header = `-- Cistella: instalación completa de la base de datos (proyecto de Supabase nuevo).
+const header = `-- LaCistella: instalación completa de la base de datos (proyecto de Supabase nuevo).
 -- Archivo generado con \`npm run sql:instalacion\`; no lo edites a mano.
 -- Pégalo entero en Supabase → SQL Editor y pulsa Run. Solo se ejecuta una vez.
 `;

@@ -11,7 +11,7 @@ export function getStripe(): Stripe | null {
   const key = env.stripe.secretKey;
   if (!key) return null;
   if (!/^(sk|rk)_test_/.test(key) && process.env.STRIPE_ALLOW_LIVE !== "true") {
-    throw new Error("Stripe está en modo live. Hasta el lanzamiento, Cistella solo usa claves de test (sk_test_…).");
+    throw new Error("Stripe está en modo live. Hasta el lanzamiento, LaCistella solo usa claves de test (sk_test_…).");
   }
   client ??= new Stripe(key);
   return client;
@@ -54,15 +54,24 @@ export async function getPlanPrice(
   amountCents: number,
 ): Promise<string> {
   const lookupKey = `cistella_${plan}_${amountCents}`;
-  const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-  if (found.data[0]) return found.data[0].id;
+  const name = `LaCistella · ${FREQUENCY_LABELS[plan]}`;
+  const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1, expand: ["data.product"] });
+  const existing = found.data[0];
+  if (existing) {
+    // Los precios creados antes del cambio de nombre (Cistella → LaCistella) se renombran una vez
+    const product = existing.product;
+    if (typeof product !== "string" && !product.deleted && product.name !== name) {
+      await stripe.products.update(product.id, { name });
+    }
+    return existing.id;
+  }
   const price = await stripe.prices.create({
     currency: "eur",
     unit_amount: amountCents,
     recurring: { interval: "month" },
     tax_behavior: "inclusive",
     lookup_key: lookupKey,
-    product_data: { name: `Cistella · ${FREQUENCY_LABELS[plan]}` },
+    product_data: { name },
   });
   return price.id;
 }

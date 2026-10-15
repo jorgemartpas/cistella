@@ -22,7 +22,7 @@ export async function updateEmail(_: ActionState, formData: FormData): Promise<A
     { emailRedirectTo: `${env.siteUrl}/auth/confirm?next=/cuenta` },
   );
   if (error) {
-    if (error.code === "email_exists") return { error: "Ese email ya tiene una cuenta en Cistella." };
+    if (error.code === "email_exists") return { error: "Ese email ya tiene una cuenta en LaCistella." };
     return { error: "No se ha podido cambiar el email. Inténtalo de nuevo en unos minutos." };
   }
   refresh();

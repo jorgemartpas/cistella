@@ -132,7 +132,7 @@ async function check<T>(promise: PromiseLike<{ data: T; error: { message: string
 }
 
 async function main() {
-  const adminId = await ensureUser("admin@cistella.test", "Equipo Cistella");
+  const adminId = await ensureUser("admin@cistella.test", "Equipo LaCistella");
   await check(supabase.from("profiles").update({ role: "admin" }).eq("id", adminId), "admin");
   console.log("✓ admin@cistella.test");
 

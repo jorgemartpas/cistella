@@ -1,4 +1,4 @@
-// Service worker de Cistella: hace la app instalable y muestra una página sin conexión.
+// Service worker de LaCistella: hace la app instalable y muestra una página sin conexión.
 // No guarda páginas con datos personales: solo los recursos estáticos y la página /offline.
 const VERSION = "cistella-v1";
 const STATIC_CACHE = `${VERSION}-static`;

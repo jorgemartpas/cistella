@@ -34,6 +34,7 @@ export const SKIP_REASONS: Record<string, string> = {
   no_disponible: "la tienda de turno no lo tenía",
   sin_tienda: "no había tienda para servirlo",
   producto_retirado: "ya no está a la venta",
+  sin_confirmar: "no confirmó el pedido",
   cesta_vacia: "cesta vacía",
   sin_productos: "ningún producto disponible",
   pedido_minimo: "no llegaba al pedido mínimo",

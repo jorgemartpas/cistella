@@ -46,6 +46,7 @@ const customer = (id: string, overrides: Partial<PlanCustomer> = {}): PlanCustom
   address: "Carrer Major 1, Alzira",
   postalCode: "46600",
   subscription: { status: "activa", frequency: "semanal", deliveryWeekday: 2, anchorDate: "2026-10-20" },
+  confirmed: true,
   ...overrides,
 });
 
@@ -221,6 +222,44 @@ describe("generación de pedidos por tienda", () => {
     ]);
   });
 
+  it("solo prepara los repartos que el cliente ha confirmado", () => {
+    const plan = planOrdersForDay(
+      baseInput({
+        customers: [
+          customer("confirmado"),
+          customer("sin-confirmar", { confirmed: false }),
+          // Confirmó un día que no le toca: no cuenta
+          customer("viernes", {
+            subscription: { status: "activa", frequency: "semanal", deliveryWeekday: 5, anchorDate: "2026-10-23" },
+          }),
+        ],
+        basket: ["confirmado", "sin-confirmar", "viernes"].map((customerId) => ({
+          customerId,
+          productId: "naranjas",
+          quantity: 1,
+        })),
+      }),
+    );
+    expect(plan.orders.map((o) => o.customerId)).toEqual(["confirmado"]);
+    expect(plan.skippedCustomers).toEqual([{ customerId: "sin-confirmar", reason: "sin_confirmar" }]);
+  });
+
+  it("2 veces por semana: cada día se confirma por separado", () => {
+    const plan = planOrdersForDay(
+      baseInput({
+        customers: [
+          customer("doble", {
+            subscription: { status: "activa", frequency: "dos_por_semana", deliveryWeekday: 2, anchorDate: "2026-10-20" },
+            confirmed: false,
+          }),
+        ],
+        basket: [{ customerId: "doble", productId: "naranjas", quantity: 1, slot: 2 }],
+      }),
+    );
+    expect(plan.orders).toEqual([]);
+    expect(plan.skippedCustomers).toEqual([{ customerId: "doble", reason: "sin_confirmar" }]);
+  });
+
   it("aplica el pedido mínimo", () => {
     const input = baseInput({ basket: [{ customerId: "c1", productId: "naranjas", quantity: 2 }] }); // 3,20 €
     expect(planOrdersForDay({ ...input, minOrderCents: 320 }).orders).toHaveLength(1);
@@ -252,7 +291,7 @@ describe("planes de 2 veces por semana y de pago por envío", () => {
   const perDelivery = (requested: boolean) =>
     customer("suelto", {
       subscription: { status: "activa", frequency: "por_envio", deliveryWeekday: 2, anchorDate: "2026-10-20" },
-      requestedDelivery: requested,
+      confirmed: requested,
     });
 
   it("2 veces por semana: el martes va la cesta del martes y el viernes la del viernes", () => {
@@ -312,7 +351,7 @@ describe("planes de 2 veces por semana y de pago por envío", () => {
   it("un pago por envío pausado o cancelado no recibe nada aunque lo pidiera", () => {
     const cancelled = customer("suelto", {
       subscription: { status: "cancelada", frequency: "por_envio", deliveryWeekday: 2, anchorDate: "2026-10-20" },
-      requestedDelivery: true,
+      confirmed: true,
     });
     const plan = planOrdersForDay(
       baseInput({ customers: [cancelled], basket: [{ customerId: "suelto", productId: "naranjas", quantity: 1 }] }),

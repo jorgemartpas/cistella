@@ -42,8 +42,8 @@ export type PlanCustomer = {
   address: string | null;
   postalCode: string | null;
   subscription: SubscriptionCadence;
-  /** Pago por envío: ha pedido este reparto */
-  requestedDelivery?: boolean;
+  /** Ha confirmado este reparto antes del cierre (en pago por envío, confirmar es pedirlo). Sin confirmar no se prepara. */
+  confirmed?: boolean;
 };
 
 export type PlanDay = {
@@ -90,19 +90,24 @@ export type PlannedOrder = {
   shops: { shopId: string; items: PlannedItem[] }[];
 };
 
-export type SkippedCustomerReason = "cesta_vacia" | "sin_productos" | "pedido_minimo" | "sin_direccion";
+export type SkippedCustomerReason = "sin_confirmar" | "cesta_vacia" | "sin_productos" | "pedido_minimo" | "sin_direccion";
 
 export type OrderPlan = {
   orders: PlannedOrder[];
   skippedCustomers: { customerId: string; reason: SkippedCustomerReason; totalCents?: number }[];
 };
 
-/** ¿Recibe pedido este cliente ese día? Reparto fijo de su plan o reparto suelto pedido. */
-export function receivesDelivery(customer: PlanCustomer, date: ISODate): boolean {
+/** ¿Le toca reparto ese día? Reparto fijo de su plan o, en pago por envío, reparto suelto pedido. */
+export function isScheduledFor(customer: PlanCustomer, date: ISODate): boolean {
   const sub = customer.subscription;
   if (sub.status !== "activa") return false;
-  if (sub.frequency === "por_envio") return Boolean(customer.requestedDelivery);
+  if (sub.frequency === "por_envio") return Boolean(customer.confirmed);
   return isDueOn(sub, date);
+}
+
+/** ¿Recibe pedido este cliente ese día? Solo si le toca y lo ha confirmado. */
+export function receivesDelivery(customer: PlanCustomer, date: ISODate): boolean {
+  return isScheduledFor(customer, date) && Boolean(customer.confirmed);
 }
 
 /**
@@ -139,7 +144,11 @@ export function planOrdersForDay(input: PlanInput): OrderPlan {
 
   const customers = [...input.customers].sort((a, b) => a.customerId.localeCompare(b.customerId));
   for (const customer of customers) {
-    if (!receivesDelivery(customer, day.date)) continue;
+    if (!isScheduledFor(customer, day.date)) continue;
+    if (!customer.confirmed) {
+      plan.skippedCustomers.push({ customerId: customer.customerId, reason: "sin_confirmar" });
+      continue;
+    }
 
     const slot = basketSlotFor(customer.subscription.frequency, day.date);
     const lines = basketByCustomer.get(`${customer.customerId}:${slot}`) ?? [];

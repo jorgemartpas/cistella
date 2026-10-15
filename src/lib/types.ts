@@ -91,7 +91,7 @@ export type GenerationReport = {
 
 export type OrderStatus = "pendiente" | "preparado" | "en_reparto" | "entregado" | "no_entregado" | "cancelado";
 export type ShopOrderStatus = "pendiente" | "preparado" | "recogido";
-export type PaymentStatus = "pendiente" | "pagado" | "fallido" | "sin_cobro";
+export type PaymentStatus = "pendiente" | "procesando" | "pagado" | "fallido" | "sin_cobro";
 
 export type Order = {
   id: string;
@@ -107,6 +107,7 @@ export type Order = {
   payment_status: PaymentStatus;
   stripe_payment_intent_id: string | null;
   payment_error: string | null;
+  payment_attempts: number;
   skipped_items: { productId: string; productName: string; reason: string }[];
   delivered_at: string | null;
   created_at: string;

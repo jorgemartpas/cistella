@@ -18,6 +18,7 @@ export const SHOP_ORDER_STATUS: Record<ShopOrderStatus, { label: string; tone: T
 
 export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; tone: Tone }> = {
   pendiente: { label: "Cobro pendiente", tone: "neutral" },
+  procesando: { label: "Cobrando…", tone: "info" },
   pagado: { label: "Pagado", tone: "success" },
   fallido: { label: "Cobro fallido", tone: "danger" },
   sin_cobro: { label: "Sin cobro", tone: "neutral" },

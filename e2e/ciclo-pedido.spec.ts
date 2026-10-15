@@ -39,21 +39,24 @@ test("ciclo completo: alta, cesta, cierre, preparación, reparto y entrega", asy
   await main(page).getByRole("button", { name: /Activar plan|Continuar al pago/ }).click();
   await expect(main(page).getByRole("heading", { name: "¡Ya estás suscrito!" })).toBeVisible();
 
-  // 2. Monta la cesta: fruta (catálogo unificado) y carne de una carnicería
-  await page.goto("/cesta?ver=fruta");
+  // 2. Monta la cesta desde la tienda: fruta (catálogo unificado) y carne de una carnicería
+  await page.goto("/");
+  await expect(main(page).getByRole("heading", { name: "Productos del momento" })).toBeVisible();
+  await page.goto("/categorias/fruta");
   await main(page).getByRole("button", { name: "Añadir Naranjas de zumo" }).click();
   await expect(main(page).getByRole("group", { name: "Cantidad de Naranjas de zumo" })).toBeVisible();
-  await page.goto("/cesta?ver=carne");
+  await page.goto("/buscar?q=lomo");
   await main(page).getByRole("button", { name: "Añadir Lomo de cerdo" }).click();
   await expect(main(page).getByRole("group", { name: "Cantidad de Lomo de cerdo" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Mi cesta: 2 productos/ })).toBeVisible();
 
-  await page.goto("/cesta?ver=cesta");
-  const deliveryDay = (await main(page).locator("p.text-xl").first().textContent())!.trim();
+  // Sin confirmar no se prepara: confirma el pedido de ese reparto desde la cesta
+  await page.goto("/cesta");
+  await expect(main(page).getByText("Sin confirmar", { exact: true })).toBeVisible();
+  const confirm = main(page).getByRole("button", { name: /^Confirmar pedido del martes/ });
+  const deliveryDay = (await confirm.textContent())!.replace(/^.*Confirmar pedido del /, "").trim();
   expect(deliveryDay).toMatch(/^martes/i);
-
-  // Sin confirmar no se prepara: confirma el pedido de ese reparto
-  await expect(main(page).getByText("Sin confirmar.")).toBeVisible();
-  await main(page).getByRole("button", { name: /^Confirmar pedido del martes/ }).click();
+  await confirm.click();
   await expect(main(page).getByText(/Pedido confirmado para el martes/)).toBeVisible();
 
   // 3. El admin cierra ese reparto y se generan los pedidos por tienda

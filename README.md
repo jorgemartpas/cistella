@@ -4,7 +4,7 @@ Web app de suscripción que lleva a casa la compra de las carnicerías, pescader
 Piloto v1 con 6 tiendas. Especificación en [SPEC.md](./SPEC.md); decisiones tomadas y pendientes en
 [DECISIONES.md](./DECISIONES.md).
 
-- **Cliente:** elige plan (2 veces por semana 25 €/mes, cada semana 20 €/mes, cada 2 semanas 16 €/mes o pago por envío, 6 € por reparto), monta su cesta, confirma cada pedido antes del cierre y ve sus pedidos.
+- **Cliente:** elige plan (2 veces por semana 25 €/mes, cada semana 20 €/mes, cada 2 semanas 16 €/mes o pago por envío, 6 € por reparto), compra en su portal (al entrar, la portada es su tienda: buscador, categorías, listas y cestas guardadas, Mis habituales), confirma cada pedido antes del cierre y ve sus pedidos.
 - **Tienda:** las carnicerías gestionan sus productos; fruterías y pescaderías marcan qué tienen. Todas preparan sus pedidos, indican el peso real y ven sus ventas y comisión.
 - **Admin:** tiendas, catálogo unificado, días de reparto y rotación, reparto del día (recogidas y entregas), clientes, ventas y ajustes.
 

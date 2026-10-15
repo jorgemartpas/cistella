@@ -39,3 +39,7 @@ Todo lo marcado como **provisional** se cambia desde el panel de admin, sin toca
 - **Comisión:** cuenta como vendido lo que el reparto ha recogido en la tienda, con la cantidad real, aunque luego el cliente no estuviera en casa.
 - **Datos que ven las tiendas:** solo el nombre del cliente y lo que han de preparar; nunca dirección ni teléfono.
 - **Stripe:** solo claves de test hasta el lanzamiento (la app rechaza claves live salvo `STRIPE_ALLOW_LIVE=true`).
+- **Portal del cliente** (15/10/2026): con sesión de cliente, la portada es su tienda, al estilo de una tienda online: buscador, Categorías, Listas y cestas, «Hola …» con su menú y el botón de la cesta con el número de productos y el total. La web de las tiendas y la del admin usan el mismo estilo (cabecera blanca, menú lateral gris, Open Sans).
+- **Listas y cestas guardadas:** una *lista* son productos que el cliente quiere tener a mano (se guardan con el marcador de cada producto); «Añadir todo a mi cesta» añade los que falten, con medio kilo o una unidad, sin tocar los que ya estén. Una *cesta guardada* es una foto de la cesta con sus cantidades; «Usar esta cesta» sustituye la cesta actual (en 2 veces por semana, la del día que se está llenando).
+- **Mis habituales:** productos de los últimos 30 pedidos del cliente, del más al menos pedido.
+- **Productos del momento** (**provisional**): un destacado de temporada que cambia cada mes, fijo en el código (`src/lib/domain/season.ts`). Más adelante podría editarlo el admin. **Novedades:** los 4 productos añadidos más recientemente.

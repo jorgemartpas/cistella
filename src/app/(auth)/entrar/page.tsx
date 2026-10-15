@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Field, Input } from "@/components/ui";
+import { Field, Input, Notice } from "@/components/ui";
 import { signIn } from "../actions";
 
 export const metadata: Metadata = { title: "Entrar" };
@@ -44,6 +44,13 @@ export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
 }
 
 async function ReturnTo({ searchParams }: Pick<PageProps<"/entrar">, "searchParams">) {
-  const { volver } = await searchParams;
-  return typeof volver === "string" ? <input type="hidden" name="volver" value={volver} /> : null;
+  const { volver, error } = await searchParams;
+  return (
+    <>
+      {error === "enlace" && (
+        <Notice tone="warning">El enlace del email ha caducado o ya se usó. Entra con tu contraseña o pide uno nuevo.</Notice>
+      )}
+      {typeof volver === "string" && <input type="hidden" name="volver" value={volver} />}
+    </>
+  );
 }

@@ -105,12 +105,15 @@ export function Field({
   hint?: ReactNode;
   children: ReactNode;
 }) {
+  // La ayuda va fuera del <label> para que no forme parte del nombre del campo
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium">{label}</span>
-      {children}
-      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
-    </label>
+    <div>
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium">{label}</span>
+        {children}
+      </label>
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+    </div>
   );
 }
 

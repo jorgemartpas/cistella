@@ -15,31 +15,14 @@ async function login(browser: Browser, email: string): Promise<Page> {
   return page;
 }
 
-test("ciclo completo: alta, cesta, cierre, preparación, reparto y entrega", async ({ page, browser }) => {
+test("ciclo completo: el visitante llena la cesta, crea la cuenta al confirmar, cierre, preparación, reparto y entrega", async ({
+  page,
+  browser,
+}) => {
   const email = `e2e-${Date.now()}@cistella.test`;
   const name = `Cliente E2E ${Date.now() % 10000}`;
 
-  // 1. Alta del cliente
-  await page.goto("/registro");
-  await main(page).getByLabel("Nombre y apellidos").fill(name);
-  await main(page).getByLabel("Email", { exact: true }).fill(email);
-  await main(page).getByLabel("Contraseña", { exact: true }).fill(PASSWORD);
-  await main(page).getByRole("checkbox").check();
-  await main(page).getByRole("button", { name: "Crear cuenta" }).click();
-  await page.waitForURL("**/bienvenida");
-
-  await main(page).getByLabel("Teléfono").fill("611222333");
-  await main(page).getByLabel("Dirección de entrega").fill("Carrer Major 10, 3º");
-  await main(page).getByLabel("Código postal").fill("46600");
-  await main(page).getByRole("button", { name: "Continuar" }).click();
-
-  await expect(main(page).getByRole("heading", { name: "Elige tu plan" })).toBeVisible();
-  await main(page).getByRole("radio", { name: /^Cada semana/ }).check();
-  await main(page).getByRole("radio", { name: /^Martes/ }).check();
-  await main(page).getByRole("button", { name: /Activar plan|Continuar al pago/ }).click();
-  await expect(main(page).getByRole("heading", { name: "¡Ya estás suscrito!" })).toBeVisible();
-
-  // 2. Monta la cesta desde la tienda: fruta (catálogo unificado) y carne de una carnicería
+  // 1. Sin cuenta: ve la tienda y llena la cesta (fruta del catálogo unificado y carne de una carnicería)
   await page.goto("/");
   await expect(main(page).getByRole("heading", { name: "Productos del momento" })).toBeVisible();
   await page.goto("/categorias/fruta");
@@ -50,14 +33,34 @@ test("ciclo completo: alta, cesta, cierre, preparación, reparto y entrega", asy
   await expect(main(page).getByRole("group", { name: "Cantidad de Lomo de cerdo" })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Mi cesta: 2 productos/ })).toBeVisible();
 
-  // Sin confirmar no se prepara: confirma el pedido de ese reparto desde la cesta
+  // 2. Al confirmar el pedido: crea la cuenta, pone sus datos y elige el plan
   await page.goto("/cesta");
-  await expect(main(page).getByText("Sin confirmar", { exact: true })).toBeVisible();
-  const confirm = main(page).getByRole("button", { name: /^Confirmar pedido del martes/ });
-  const deliveryDay = (await confirm.textContent())!.replace(/^.*Confirmar pedido del /, "").trim();
+  await main(page).getByRole("link", { name: "Confirmar pedido" }).click();
+  await page.waitForURL("**/registro**");
+  await main(page).getByLabel("Nombre y apellidos").fill(name);
+  await main(page).getByLabel("Email", { exact: true }).fill(email);
+  await main(page).getByLabel("Contraseña", { exact: true }).fill(PASSWORD);
+  await main(page).getByRole("checkbox").check();
+  await main(page).getByRole("button", { name: "Crear cuenta" }).click();
+  await page.waitForURL("**/bienvenida?confirmar=1");
+
+  await main(page).getByLabel("Teléfono").fill("611222333");
+  await main(page).getByLabel("Dirección de entrega").fill("Carrer Major 10, 3º");
+  await main(page).getByLabel("Código postal").fill("46600");
+  await main(page).getByRole("button", { name: "Continuar" }).click();
+
+  await expect(main(page).getByRole("heading", { name: "Elige tu plan" })).toBeVisible();
+  await main(page).getByRole("radio", { name: /^Cada semana/ }).check();
+  await main(page).getByRole("radio", { name: /^Martes/ }).check();
+  await main(page).getByRole("button", { name: /Activar plan|Continuar al pago/ }).click();
+
+  // Vuelve a su cesta (la que llenó sin cuenta) y el pedido queda confirmado solo
+  await page.waitForURL("**/cesta?confirmar=1");
+  const confirmed = main(page).getByText(/Pedido confirmado para el martes/);
+  await expect(confirmed).toBeVisible();
+  const deliveryDay = (await confirmed.textContent())!.replace(/^.*Pedido confirmado para el /, "").trim();
   expect(deliveryDay).toMatch(/^martes/i);
-  await confirm.click();
-  await expect(main(page).getByText(/Pedido confirmado para el martes/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Mi cesta: 2 productos/ })).toBeVisible();
 
   // 3. El admin cierra ese reparto y se generan los pedidos por tienda
   const admin = await login(browser, "admin@cistella.test");

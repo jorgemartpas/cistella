@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui";
+import { Notice, PageSkeleton } from "@/components/ui";
 import { CATEGORY_META } from "@/components/store/catalog-meta";
 import { DeliveryBar } from "@/components/store/delivery-bar";
 import { ProductGrid } from "@/components/store/product-grid";
@@ -13,11 +13,29 @@ import { seasonHighlight } from "@/lib/domain/season";
 export const metadata: Metadata = { title: "Inicio" };
 
 // Portada del cliente con sesión iniciada: el proxy reescribe "/" a esta página
-export default function StoreHomePage() {
+export default function StoreHomePage({ searchParams }: PageProps<"/portada">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <StoreHome />
-    </Suspense>
+    <>
+      <Suspense>
+        <DeletedAccountNotice searchParams={searchParams} />
+      </Suspense>
+      <Suspense fallback={<PageSkeleton />}>
+        <StoreHome />
+      </Suspense>
+    </>
+  );
+}
+
+/** Aviso tras eliminar la cuenta (Mi cuenta → Datos personales) */
+async function DeletedAccountNotice({ searchParams }: Pick<PageProps<"/portada">, "searchParams">) {
+  const { cuenta } = await searchParams;
+  if (cuenta !== "eliminada") return null;
+  return (
+    <div className="mx-auto mb-6 max-w-5xl">
+      <Notice tone="success" title="Tu cuenta se ha eliminado">
+        Hemos cancelado tu cuota y borrado tus datos. Gracias por haber confiado en las tiendas de Alzira.
+      </Notice>
+    </div>
   );
 }
 

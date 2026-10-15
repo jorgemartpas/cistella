@@ -59,7 +59,9 @@ export async function proxy(request: NextRequest) {
       showStore = profile?.role === "cliente";
     }
     if (showStore) {
-      const rewrite = NextResponse.rewrite(new URL("/portada", request.url), { request });
+      const store = request.nextUrl.clone();
+      store.pathname = "/portada";
+      const rewrite = NextResponse.rewrite(store, { request });
       for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
       return rewrite;
     }

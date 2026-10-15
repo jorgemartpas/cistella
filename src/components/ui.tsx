@@ -89,7 +89,12 @@ export function EmptyState({ icon, title, children }: { icon: string; title: str
 }
 
 const inputStyles =
-  "w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder:text-muted/70 focus:border-primary focus:outline-none";
+  "rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder:text-muted/70 focus:border-primary focus:outline-none";
+
+/** Ancho completo salvo que se pase otro ancho (w-24, w-auto…) */
+function withWidth(className?: string) {
+  return /(^|\s)(w-|min-w-0 flex-1)/.test(className ?? "") ? className : cx("w-full", className);
+}
 
 export function Field({
   label,
@@ -110,15 +115,15 @@ export function Field({
 }
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
-  return <input className={cx(inputStyles, className)} {...props} />;
+  return <input className={cx(inputStyles, withWidth(className))} {...props} />;
 }
 
 export function Select({ className, ...props }: ComponentProps<"select">) {
-  return <select className={cx(inputStyles, "appearance-auto", className)} {...props} />;
+  return <select className={cx(inputStyles, "appearance-auto", withWidth(className))} {...props} />;
 }
 
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
-  return <textarea className={cx(inputStyles, className)} {...props} />;
+  return <textarea className={cx(inputStyles, withWidth(className))} {...props} />;
 }
 
 export function Skeleton({ className }: { className?: string }) {

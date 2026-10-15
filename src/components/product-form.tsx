@@ -75,6 +75,20 @@ export function ProductForm({
           <span className="block text-sm text-muted">Si lo desmarcas, no aparece en el catálogo ni entra en pedidos.</span>
         </span>
       </label>
+      {!categories.includes("carne") && (
+        <label className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+          <input
+            type="checkbox"
+            name="seasonal"
+            defaultChecked={product?.seasonal ?? false}
+            className="size-5 accent-[var(--primary)]"
+          />
+          <span>
+            <span className="block font-medium">De temporada</span>
+            <span className="block text-sm text-muted">Sale en la portada, en «Productos de temporada».</span>
+          </span>
+        </label>
+      )}
       <SubmitButton className="w-full">{product ? "Guardar cambios" : "Crear producto"}</SubmitButton>
     </ActionForm>
   );

@@ -24,7 +24,7 @@ test("ciclo completo: el visitante llena la cesta, crea la cuenta al confirmar, 
 
   // 1. Sin cuenta: ve la tienda y llena la cesta (fruta del catálogo unificado y carne de una carnicería)
   await page.goto("/");
-  await expect(main(page).getByRole("heading", { name: "Productos del momento" })).toBeVisible();
+  await expect(main(page).getByRole("heading", { name: "Productos de temporada" })).toBeVisible();
   await page.goto("/categorias/fruta");
   await main(page).getByRole("button", { name: "Añadir Naranjas de zumo" }).click();
   await expect(main(page).getByRole("group", { name: "Cantidad de Naranjas de zumo" })).toBeVisible();

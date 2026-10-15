@@ -45,11 +45,29 @@ const SEPTEMBER: SeasonHighlight = {
   colors: ["#3a1450", "#7c3a8f"],
 };
 
-/** Destacado de «Productos del momento» según el mes (1 = enero … 12 = diciembre). */
+/** Destacado de «Productos de temporada» según el mes (1 = enero … 12 = diciembre). */
 export function seasonHighlight(month: number): SeasonHighlight {
   if (month === 9) return SEPTEMBER;
   if (month === 10 || month === 11) return AUTUMN;
   if (month === 12 || month <= 2) return WINTER;
   if (month <= 5) return SPRING;
   return SUMMER;
+}
+
+/** Categorías de «Productos de temporada», en el orden de la portada */
+export const SEASONAL_CATEGORIES: ProductCategory[] = ["fruta", "verdura", "pescado"];
+
+/**
+ * Productos de temporada de la portada: los que el admin ha marcado como «De temporada», separados
+ * en fruta, verdura y pescado (por nombre). Las categorías sin ninguno no salen.
+ */
+export function seasonalGroups<T extends { category: ProductCategory; seasonal: boolean; active: boolean; name: string }>(
+  products: T[],
+): { category: ProductCategory; products: T[] }[] {
+  return SEASONAL_CATEGORIES.map((category) => ({
+    category,
+    products: products
+      .filter((p) => p.seasonal && p.active && p.category === category)
+      .sort((a, b) => a.name.localeCompare(b.name, "es")),
+  })).filter((group) => group.products.length > 0);
 }

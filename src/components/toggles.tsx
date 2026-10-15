@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { setAvailability, setProductActive } from "@/lib/actions/products";
+import { setAvailability, setProductActive, setProductSeasonal } from "@/lib/actions/products";
 import { Icon } from "./icons";
 import { cx } from "./ui";
 
@@ -12,6 +12,7 @@ function ToggleChip({
   labelOn,
   labelOff,
   ariaLabel,
+  strikeOff = true,
 }: {
   on: boolean;
   pending: boolean;
@@ -19,6 +20,8 @@ function ToggleChip({
   labelOn: string;
   labelOff: string;
   ariaLabel: string;
+  /** Tachar el texto cuando está apagado */
+  strikeOff?: boolean;
 }) {
   return (
     <button
@@ -29,7 +32,7 @@ function ToggleChip({
       onClick={onClick}
       className={cx(
         "inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors",
-        on ? "bg-primary-soft text-primary" : "bg-surface-2 text-muted line-through decoration-1",
+        on ? "bg-primary-soft text-primary" : cx("bg-surface-2 text-muted", strikeOff && "line-through decoration-1"),
         pending && "opacity-70",
       )}
     >
@@ -89,6 +92,28 @@ export function ActiveToggle({ productId, active, productName }: { productId: st
         startTransition(async () => {
           setOptimistic(!optimistic);
           await setProductActive(productId, !optimistic);
+        })
+      }
+    />
+  );
+}
+
+/** Interruptor «De temporada» del catálogo unificado (admin): sale en la portada. */
+export function SeasonalToggle({ productId, seasonal, productName }: { productId: string; seasonal: boolean; productName: string }) {
+  const [pending, startTransition] = useTransition();
+  const [optimistic, setOptimistic] = useOptimistic(seasonal);
+  return (
+    <ToggleChip
+      on={optimistic}
+      pending={pending}
+      labelOn="De temporada"
+      labelOff="Marcar de temporada"
+      strikeOff={false}
+      ariaLabel={`${productName}: de temporada`}
+      onClick={() =>
+        startTransition(async () => {
+          setOptimistic(!optimistic);
+          await setProductSeasonal(productId, !optimistic);
         })
       }
     />

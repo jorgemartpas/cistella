@@ -41,7 +41,7 @@ export function StoreSection({
   );
 }
 
-/** Destacado de temporada de «Productos del momento». */
+/** Destacado del mes en «Productos de temporada». */
 export function SeasonHero({ highlight, href }: { highlight: SeasonHighlight; href: string }) {
   const [from, to] = highlight.colors;
   return (

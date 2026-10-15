@@ -39,6 +39,8 @@ export type Product = {
   price_cents: number;
   unit: ProductUnit;
   active: boolean;
+  /** Lo marca el admin; sale en «Productos de temporada» de la portada (fruta, verdura y pescado) */
+  seasonal: boolean;
   created_at: string;
 };
 

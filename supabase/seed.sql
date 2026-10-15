@@ -57,6 +57,11 @@ insert into public.products (category, name, description, price_cents, unit) val
   ('pescado', 'Mejillones', null, 450, 'kg'),
   ('pescado', 'Gambas', null, 2290, 'kg');
 
+-- De temporada (otoño), para ver la portada con datos de ejemplo
+update public.products set seasonal = true
+  where shop_id is null and name in ('Kakis de la Ribera', 'Mandarinas clemenules', 'Uva moscatel',
+    'Calabacín', 'Pimiento rojo', 'Alcachofas', 'Sepia', 'Boquerones', 'Dorada');
+
 -- Disponibilidad: cada tienda tiene casi todo; algunas excepciones para ver la regla
 insert into public.shop_availability (shop_id, product_id, available)
 select s.id, p.id,

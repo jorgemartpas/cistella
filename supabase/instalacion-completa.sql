@@ -912,6 +912,14 @@ create policy "cliente recupera un reparto abierto" on public.delivery_skips for
 revoke all on public.delivery_skips from anon;
 revoke update on public.delivery_skips from authenticated;
 
+-- ════════ supabase/migrations/20261015090800_productos_temporada.sql ════════
+
+-- Productos de temporada (decisión del 15/10/2026): el admin marca qué productos de fruta, verdura
+-- y pescado son de temporada; la portada de la tienda los muestra separados por categoría.
+-- Las políticas de products no cambian: solo el admin edita el catálogo unificado.
+
+alter table public.products add column seasonal boolean not null default false;
+
 -- ════════ supabase/seed.sql ════════
 
 -- Datos de ejemplo del piloto: 6 tiendas (2 de cada tipo), catálogo y calendario.
@@ -972,6 +980,11 @@ insert into public.products (category, name, description, price_cents, unit) val
   ('pescado', 'Salmón', 'Lomos', 1690, 'kg'),
   ('pescado', 'Mejillones', null, 450, 'kg'),
   ('pescado', 'Gambas', null, 2290, 'kg');
+
+-- De temporada (otoño), para ver la portada con datos de ejemplo
+update public.products set seasonal = true
+  where shop_id is null and name in ('Kakis de la Ribera', 'Mandarinas clemenules', 'Uva moscatel',
+    'Calabacín', 'Pimiento rojo', 'Alcachofas', 'Sepia', 'Boquerones', 'Dorada');
 
 -- Disponibilidad: cada tienda tiene casi todo; algunas excepciones para ver la regla
 insert into public.shop_availability (shop_id, product_id, available)

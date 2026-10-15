@@ -19,6 +19,7 @@ const productSchema = z.object({
   unit: z.enum(["kg", "unidad", "bandeja"], { error: "Elige la unidad" }),
   price: z.string().min(1, "Escribe el precio"),
   active: z.literal("on").optional(),
+  seasonal: z.literal("on").optional(),
 });
 
 /**
@@ -62,6 +63,8 @@ export async function saveProduct(_: ActionState, formData: FormData): Promise<A
     unit: input.unit,
     price_cents: priceCents,
     active: input.active === "on",
+    // «De temporada» solo en el catálogo unificado (fruta, verdura y pescado)
+    seasonal: category !== "carne" && input.seasonal === "on",
     shop_id: shopId,
   };
 
@@ -95,6 +98,14 @@ export async function setProductActive(productId: string, active: boolean) {
   await requireRole("admin", "tienda");
   const supabase = await createClient();
   await supabase.from("products").update({ active }).eq("id", productId);
+  refresh();
+}
+
+/** Marca o desmarca un producto del catálogo unificado como «De temporada» (sale en la portada). */
+export async function setProductSeasonal(productId: string, seasonal: boolean) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("products").update({ seasonal }).eq("id", productId).neq("category", "carne");
   refresh();
 }
 

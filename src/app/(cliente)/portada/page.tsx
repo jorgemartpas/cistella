@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
+import { Icon } from "@/components/icons";
 import { Notice, PageSkeleton } from "@/components/ui";
 import { CATEGORY_META } from "@/components/store/catalog-meta";
 import { DeliveryBar } from "@/components/store/delivery-bar";
 import { ProductGrid } from "@/components/store/product-grid";
 import { SeasonHero, StoreSection } from "@/components/store/sections";
-import { CATEGORY_ORDER } from "@/lib/catalog";
 import { getClientContext, getUsualProductIds } from "@/lib/client-context";
 import { TIME_ZONE } from "@/lib/domain/dates";
-import { seasonHighlight } from "@/lib/domain/season";
+import { seasonalGroups, seasonHighlight } from "@/lib/domain/season";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -43,9 +44,7 @@ async function StoreHome() {
   const [ctx, usualIds] = await Promise.all([getClientContext(), getUsualProductIds()]);
   const month = Number(new Intl.DateTimeFormat("en", { month: "numeric", timeZone: TIME_ZONE }).format(new Date()));
   const highlight = seasonHighlight(month);
-  const newest = [...ctx.products]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at) || a.name.localeCompare(b.name, "es"))
-    .slice(0, 4);
+  const seasonal = seasonalGroups(ctx.products);
   const byId = new Map(ctx.products.map((p) => [p.id, p]));
   const usual = usualIds.flatMap((id) => byId.get(id) ?? []).slice(0, 4);
 
@@ -53,8 +52,27 @@ async function StoreHome() {
     <div className="mx-auto max-w-5xl">
       <DeliveryBar />
 
-      <StoreSection title="Productos del momento" subtitle="Lo mejor de la temporada en las tiendas de Alzira">
+      <StoreSection title="Productos de temporada" subtitle="Lo mejor de cada época en las tiendas de Alzira">
         <SeasonHero highlight={highlight} href={`/categorias/${highlight.category}`} />
+        {seasonal.map(({ category, products }) => {
+          const group = SEASONAL_GROUPS[category as keyof typeof SEASONAL_GROUPS];
+          return (
+            <div key={category} className="mt-8">
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
+                  <span aria-hidden>{CATEGORY_META[category].icon}</span> {group.title}
+                </h3>
+                <Link
+                  href={`/categorias/${category}`}
+                  className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-primary hover:underline"
+                >
+                  {group.link} <Icon name="chevron" className="size-4" />
+                </Link>
+              </div>
+              <ProductGrid products={products} />
+            </div>
+          );
+        })}
       </StoreSection>
 
       {usual.length > 0 && (
@@ -62,32 +80,12 @@ async function StoreHome() {
           <ProductGrid products={usual} />
         </StoreSection>
       )}
-
-      <StoreSection
-        title="Novedades"
-        subtitle="Productos recién añadidos o mejorados"
-        href="/categorias"
-        linkText="Ver todo el catálogo"
-      >
-        <ProductGrid products={newest} />
-      </StoreSection>
-
-      {CATEGORY_ORDER.map((category) => {
-        const products = ctx.products.filter((p) => p.category === category).slice(0, 4);
-        if (products.length === 0) return null;
-        const meta = CATEGORY_META[category];
-        return (
-          <StoreSection
-            key={category}
-            title={meta.home}
-            subtitle={meta.subtitle}
-            href={`/categorias/${category}`}
-            linkText={`Ver ${meta.title.toLowerCase()}`}
-          >
-            <ProductGrid products={products} />
-          </StoreSection>
-        );
-      })}
     </div>
   );
 }
+
+const SEASONAL_GROUPS = {
+  fruta: { title: "Fruta", link: "Ver toda la fruta" },
+  verdura: { title: "Verduras", link: "Ver todas las verduras" },
+  pescado: { title: "Pescado", link: "Ver todo el pescado" },
+};

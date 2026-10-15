@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { CategoryTabs } from "@/components/category-tabs";
 import { Icon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
-import { ActiveToggle, AvailabilityToggle } from "@/components/toggles";
+import { ActiveToggle, AvailabilityToggle, SeasonalToggle } from "@/components/toggles";
 import { Badge, ButtonLink, Card, EmptyState, PageHeader, PageSkeleton } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { CATEGORY_ORDER, getProducts, getShops } from "@/lib/catalog";
@@ -49,7 +49,7 @@ async function Catalog({ searchParams }: Pick<PageProps<"/admin/catalogo">, "sea
         subtitle={
           isMeat
             ? "La carne la gestiona cada carnicería desde su panel. Aquí puedes corregir lo que haga falta."
-            : "Catálogo unificado: tú fijas nombre, foto y precio; cada tienda marca si lo tiene."
+            : "Catálogo unificado: tú fijas nombre, foto y precio y qué es de temporada; cada tienda marca si lo tiene."
         }
         action={
           !isMeat && (
@@ -86,17 +86,21 @@ async function Catalog({ searchParams }: Pick<PageProps<"/admin/catalogo">, "sea
                   {isMeat ? (
                     <ActiveToggle productId={p.id} active={p.active} productName={p.name} />
                   ) : (
-                    shopsOfType.map((s) => (
-                      <AvailabilityToggle
-                        key={s.id}
-                        shopId={s.id}
-                        productId={p.id}
-                        productName={`${p.name} en ${s.name}`}
-                        available={isAvailable.has(`${s.id}:${p.id}`)}
-                        labelOn={s.name}
-                        labelOff={s.name}
-                      />
-                    ))
+                    <>
+                      {shopsOfType.map((s) => (
+                        <AvailabilityToggle
+                          key={s.id}
+                          shopId={s.id}
+                          productId={p.id}
+                          productName={`${p.name} en ${s.name}`}
+                          available={isAvailable.has(`${s.id}:${p.id}`)}
+                          labelOn={s.name}
+                          labelOff={s.name}
+                        />
+                      ))}
+                      <span aria-hidden className="mx-1 w-px self-stretch bg-border" />
+                      <SeasonalToggle productId={p.id} seasonal={p.seasonal} productName={p.name} />
+                    </>
                   )}
                 </div>
               </Card>

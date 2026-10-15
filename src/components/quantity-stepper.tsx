@@ -2,11 +2,16 @@
 
 import { useOptimistic, useState, useTransition } from "react";
 import { setBasketQuantity } from "@/lib/actions/basket";
-import { formatQuantity, quantityStep, type ProductUnit } from "@/lib/domain/money";
+import { formatQuantity, normalizeQuantity, parseQuantity, quantityStep, type ProductUnit } from "@/lib/domain/money";
 import { Icon } from "./icons";
 import { cx } from "./ui";
 
-/** Añadir, sumar y restar un producto de la cesta recurrente. */
+const UNIT_SUFFIX: Record<ProductUnit, string> = { kg: "kg", unidad: "ud.", bandeja: "bandejas" };
+
+/**
+ * Añadir, sumar y restar un producto de la cesta recurrente. Pulsando la cantidad se puede
+ * escribir la exacta (al gramo en lo que va al kilo).
+ */
 export function QuantityStepper({
   productId,
   productName,
@@ -24,10 +29,11 @@ export function QuantityStepper({
   const [pending, startTransition] = useTransition();
   const [optimistic, setOptimistic] = useOptimistic(quantity);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const step = quantityStep(unit);
 
   const change = (next: number) => {
-    const value = Math.max(0, Math.round(next / step) * step);
+    const value = Math.max(0, normalizeQuantity(next, unit));
     setError(null);
     startTransition(async () => {
       setOptimistic(value);
@@ -35,6 +41,56 @@ export function QuantityStepper({
       if (result.error) setError(result.error);
     });
   };
+
+  const submitTyped = (input: string) => {
+    const typed = parseQuantity(input);
+    if (typed === null || typed > 50) {
+      setError(unit === "kg" ? "Escribe el peso así: 0,3" : "Escribe un número entero.");
+      return;
+    }
+    setEditing(false);
+    if (normalizeQuantity(typed, unit) !== optimistic) change(typed);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <form
+          className="inline-flex items-center gap-1 rounded-full border border-primary bg-surface pl-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitTyped(String(new FormData(e.currentTarget).get("quantity") ?? ""));
+          }}
+        >
+          <input
+            name="quantity"
+            inputMode={unit === "kg" ? "decimal" : "numeric"}
+            defaultValue={String(optimistic).replace(".", ",")}
+            aria-label={`Cantidad exacta de ${productName}`}
+            autoFocus
+            onFocus={(e) => e.currentTarget.select()}
+            onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
+            className="w-16 bg-transparent py-2 text-right text-sm font-semibold tabular-nums"
+            // El borde verde del óvalo ya marca el foco (la regla global de :focus-visible no cede ante clases)
+            style={{ outline: "none" }}
+          />
+          <span className="text-sm text-muted">{UNIT_SUFFIX[unit]}</span>
+          <button
+            type="submit"
+            className="flex size-10 items-center justify-center rounded-full text-primary hover:bg-primary-soft"
+            aria-label={`Guardar la cantidad de ${productName}`}
+          >
+            <Icon name="check" className="size-4" />
+          </button>
+        </form>
+        {error && (
+          <p role="alert" className="max-w-56 text-right text-xs text-danger">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -61,9 +117,18 @@ export function QuantityStepper({
           >
             <Icon name={optimistic <= step ? "trash" : "minus"} className="size-4" />
           </button>
-          <span className="min-w-20 text-center text-sm font-semibold tabular-nums" aria-live="polite">
-            {formatQuantity(optimistic, unit)}
-          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setEditing(true);
+            }}
+            className="min-w-20 rounded-md text-center text-sm font-semibold tabular-nums underline decoration-dotted underline-offset-4"
+            aria-label={`${formatQuantity(optimistic, unit)}. Escribir la cantidad exacta de ${productName}`}
+            title="Escribir la cantidad exacta"
+          >
+            <span aria-live="polite">{formatQuantity(optimistic, unit)}</span>
+          </button>
           <button
             type="button"
             onClick={() => change(optimistic + step)}

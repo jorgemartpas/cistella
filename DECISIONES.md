@@ -35,7 +35,7 @@ Todo lo marcado como **provisional** se cambia desde el panel de admin, sin toca
 - **Festivos:** el admin puede cancelar un día de reparto; nadie recibe pedido ese día.
 - **Reabrir un reparto cerrado** (**provisional**): el admin puede reabrirlo con una hora de cierre nueva mientras nada se haya recogido en las tiendas, entregado o cobrado. Se borran sus pedidos (también lo que las tiendas hubieran marcado como preparado) y se vuelven a generar al cerrar; las confirmaciones de los clientes se mantienen.
 - **Precios:** cada pedido guarda el precio del momento del cierre; cambiar un precio no altera pedidos ya generados.
-- **Cantidades:** lo que va al kilo se pide en cuartos de kilo; unidades y bandejas, enteras. La tienda puede indicar cualquier cantidad real.
+- **Cantidades:** lo que va al kilo se puede pedir al gramo (los botones + y − van de 250 g en 250 g; pulsando la cantidad se escribe la exacta); unidades y bandejas, enteras. La tienda puede indicar cualquier cantidad real.
 - **Comisión:** cuenta como vendido lo que el reparto ha recogido en la tienda, con la cantidad real, aunque luego el cliente no estuviera en casa.
 - **Datos que ven las tiendas:** solo el nombre del cliente y lo que han de preparar; nunca dirección ni teléfono.
 - **Stripe:** solo claves de test hasta el lanzamiento (la app rechaza claves live salvo `STRIPE_ALLOW_LIVE=true`).

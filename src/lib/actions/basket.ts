@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { closingDayFor, getScheduleRules, toCadence } from "@/lib/delivery";
-import { quantityStep, type ProductUnit } from "@/lib/domain/money";
+import { normalizeQuantity, type ProductUnit } from "@/lib/domain/money";
 import { basketSlotFor, isDueOn, usesDayBaskets } from "@/lib/domain/subscription";
 import { createClient } from "@/lib/supabase/server";
 import type { Subscription } from "@/lib/types";
@@ -54,9 +54,9 @@ export async function setBasketQuantity(productId: string, quantity: number, slo
 
   const { data: product } = await supabase.from("products").select("unit, active").eq("id", productId).maybeSingle();
   if (!product?.active) return { error: "Este producto ya no está disponible." };
-  const step = quantityStep(product.unit as ProductUnit);
-  const rounded = Math.round(quantity / step) * step;
-  if (rounded <= 0 || rounded > 50) return { error: "Esa cantidad no es válida." };
+  // Al gramo en lo que va al kilo; enteros en unidades y bandejas
+  const rounded = normalizeQuantity(quantity, product.unit as ProductUnit);
+  if (!(rounded > 0) || rounded > 50) return { error: "Esa cantidad no es válida." };
 
   const { error } = await supabase
     .from("basket_items")

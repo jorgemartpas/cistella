@@ -12,7 +12,6 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "seed:users": "tsx --env-file=.env.local scripts/seed-users.ts",
-    "stripe:setup": "tsx --env-file=.env.local scripts/stripe-setup.ts",
     "test:rls": "vitest run --config vitest.integration.config.mts",
     "sql:instalacion": "node scripts/sql-instalacion.mjs"
   },

@@ -34,9 +34,6 @@ export const env = {
     get secretKey() {
       return process.env.STRIPE_SECRET_KEY ?? null;
     },
-    get priceId() {
-      return process.env.STRIPE_PRICE_ID ?? null;
-    },
     get webhookSecret() {
       return process.env.STRIPE_WEBHOOK_SECRET ?? null;
     },

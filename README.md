@@ -4,7 +4,7 @@ Web app de suscripción que lleva a casa la compra de las carnicerías, pescader
 Piloto v1 con 6 tiendas. Especificación en [SPEC.md](./SPEC.md); decisiones tomadas y pendientes en
 [DECISIONES.md](./DECISIONES.md).
 
-- **Cliente:** se suscribe (20 €/mes), elige día y frecuencia, monta una cesta que se repite sola y ve sus pedidos.
+- **Cliente:** elige plan (2 veces por semana 25 €/mes, cada semana 20 €/mes, cada 2 semanas 16 €/mes o pago por envío, 6 € por reparto), monta una cesta que se repite sola y ve sus pedidos.
 - **Tienda:** las carnicerías gestionan sus productos; fruterías y pescaderías marcan qué tienen. Todas preparan sus pedidos, indican el peso real y ven sus ventas y comisión.
 - **Admin:** tiendas, catálogo unificado, días de reparto y rotación, reparto del día (recogidas y entregas), clientes, ventas y ajustes.
 
@@ -23,7 +23,7 @@ npx supabase start
 npx supabase db reset
 # Copia la URL y las claves que imprime `npx supabase status` a .env.local
 
-# Usuarios de prueba (admin, una cuenta por tienda y dos clientes con cesta)
+# Usuarios de prueba (admin, una cuenta por tienda y un cliente de cada plan)
 npm run seed:users
 
 npm run dev   # http://localhost:3000
@@ -32,7 +32,7 @@ npm run dev   # http://localhost:3000
 ### Pagos en local
 
 - **Sin Stripe:** pon `PAYMENTS_DEMO_MODE=true` en `.env.local`. El alta se activa sin cobrar y los pedidos quedan «cobro pendiente». Nunca en producción.
-- **Con Stripe (modo test):** pon `STRIPE_SECRET_KEY=sk_test_…`, ejecuta `npm run stripe:setup` y copia el `STRIPE_PRICE_ID`. Para recibir webhooks:
+- **Con Stripe (modo test):** pon `STRIPE_SECRET_KEY=sk_test_…`. Los precios de los planes se crean solos en Stripe la primera vez que alguien elige cada plan. Para recibir webhooks:
   `stripe listen --forward-to localhost:3000/api/stripe/webhook` y copia el `whsec_…` a `STRIPE_WEBHOOK_SECRET`.
   Tarjeta de prueba: `4242 4242 4242 4242`, cualquier fecha futura y CVC.
 
@@ -44,7 +44,7 @@ Contraseña de todas: `cistella-demo`.
 | --- | --- |
 | Admin | `admin@cistella.test` |
 | Tiendas | `oskinez@`, `reino@`, `ferrer@`, `tomas@`, `fruteria-a@`, `fruteria-b@` + `cistella.test` |
-| Clientes | `lucia@cistella.test` (semanal, martes), `pau@cistella.test` (quincenal, viernes) |
+| Clientes | `lucia@cistella.test` (cada semana, martes), `pau@cistella.test` (cada 2 semanas, viernes), `marta@cistella.test` (2 veces por semana), `toni@cistella.test` (pago por envío) |
 
 ## Tests
 
@@ -63,7 +63,7 @@ npm run lint
    Sin la CLI: pega `supabase/instalacion-completa.sql` (todas las migraciones + el seed) en el SQL Editor y pulsa *Run*.
    En *Authentication → URL Configuration*: Site URL = tu dominio y añade `https://<dominio>/auth/confirm` a Redirect URLs.
    Conviene dejar activada la confirmación de email.
-2. **Stripe (modo test):** crea el precio con `npm run stripe:setup`. Añade un webhook a `https://<dominio>/api/stripe/webhook` con los eventos
+2. **Stripe (modo test):** no hace falta crear precios (la app los crea con la clave `cistella_<plan>_<céntimos>`). Añade un webhook a `https://<dominio>/api/stripe/webhook` con los eventos
    `checkout.session.completed`, `customer.subscription.created|updated|deleted|paused|resumed`,
    `payment_intent.succeeded` y `payment_intent.payment_failed`. Activa el *Customer Portal* en la configuración de Billing (para cambiar tarjeta).
 3. **Vercel:** importa el repositorio y define las variables de `.env.example`
@@ -83,7 +83,7 @@ Cada tienda prepara (peso real) ──► El reparto recoge ──► Entrega �
 ```
 
 - **Lógica de negocio** en `src/lib/domain/` (TypeScript puro, con tests): fechas en hora de Madrid, calendario y cierres,
-  rotación de tiendas, frecuencias de la suscripción y reparto de cada cesta en pedidos por tienda.
+  rotación de tiendas, planes (qué días toca reparto a cada cliente y con qué cesta) y reparto de cada cesta en pedidos por tienda.
 - **Generación de pedidos:** `src/lib/delivery.ts` planifica con el dominio y guarda todo en una transacción con la función SQL
   `create_orders_for_day`, que es idempotente (repetirla no duplica pedidos).
 - **Permisos:** RLS en todas las tablas (`supabase/migrations/`). Cada página comprueba además el rol con `requireRole()`.

@@ -52,7 +52,7 @@ async function Usual() {
   if (products.length === 0) {
     return (
       <EmptyState icon="🧺" title="Aún no tienes suficientes compras">
-        Cuando recibas tus pedidos, aquí verás los productos que pides con más frecuencia.
+        Cuando te entreguemos tus primeros pedidos, aquí verás los productos que más pides.
       </EmptyState>
     );
   }

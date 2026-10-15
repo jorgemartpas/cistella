@@ -14,6 +14,7 @@ import {
 } from "@/lib/delivery";
 import { lineTotalCents } from "@/lib/domain/money";
 import type { ScheduleRule } from "@/lib/domain/schedule";
+import { rankUsualProducts } from "@/lib/domain/usual";
 import { usesDayBaskets, type DeliveryFrequency } from "@/lib/domain/subscription";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { DeliveryDay, Product, Profile, Settings, Shop, Subscription } from "@/lib/types";
@@ -174,21 +175,30 @@ export const getListMembership = cache(async (): Promise<ListMembership> => {
   return { lists: (lists ?? []) as { id: string; name: string }[], byProduct };
 });
 
-/** «Mis habituales»: productos que más ha pedido el cliente, del más al menos pedido. */
+/** «Mis habituales»: lo que más ha pedido el cliente en sus pedidos entregados (si no hay, ninguno). */
 export const getUsualProductIds = cache(async (): Promise<string[]> => {
   const profile = await requireRole("cliente");
   const supabase = await createClient();
   const { data } = await supabase
     .from("orders")
-    .select("status, shop_orders(order_items(product_id))")
+    .select("shop_orders(order_items(product_id, quantity_ordered, quantity_actual))")
     .eq("customer_id", profile.id)
-    .neq("status", "cancelado")
+    .eq("status", "entregado")
     .order("created_at", { ascending: false })
     .limit(30);
-  const timesOrdered = new Map<string, number>();
-  for (const order of (data ?? []) as { shop_orders: { order_items: { product_id: string | null }[] }[] }[]) {
-    const inOrder = new Set(order.shop_orders.flatMap((so) => so.order_items.map((i) => i.product_id)));
-    for (const id of inOrder) if (id) timesOrdered.set(id, (timesOrdered.get(id) ?? 0) + 1);
-  }
-  return [...timesOrdered.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  type Row = {
+    shop_orders: {
+      order_items: { product_id: string | null; quantity_ordered: number; quantity_actual: number | null }[];
+    }[];
+  };
+  return rankUsualProducts(
+    ((data ?? []) as Row[]).map((order) => ({
+      items: order.shop_orders.flatMap((so) =>
+        so.order_items.map((i) => ({
+          productId: i.product_id,
+          quantity: Number(i.quantity_actual ?? i.quantity_ordered),
+        })),
+      ),
+    })),
+  );
 });

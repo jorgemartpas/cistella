@@ -9,6 +9,6 @@
 - Permisos: RLS en la base de datos (migraciones) y `requireRole()` / `requireShop()` en cada página y Server Action. Si cambias políticas, amplía `tests/rls.test.ts`.
 - Migraciones nuevas: archivo nuevo en `supabase/migrations/`, nunca editar una ya desplegada.
 - Formularios: `ActionForm` + Server Action que devuelve `{ error }` o `{ ok }`.
-- En tests de navegador, Next mantiene montadas (ocultas) las rutas anteriores: usa `main:visible`.
+- En tests de navegador, Next mantiene montadas (ocultas) las rutas anteriores: usa `main:visible`. La UI optimista no es lo guardado: antes de navegar, espera algo que venga del servidor (por ejemplo, el contador de «Mi cesta»).
 - Stripe solo en modo test hasta el lanzamiento. Commits pequeños, uno por funcionalidad.
 - Antes de decidir una regla de negocio no especificada, revisa `DECISIONES.md` y pregunta.

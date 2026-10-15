@@ -28,6 +28,8 @@ test("ciclo completo: el visitante llena la cesta, crea la cuenta al confirmar, 
   await page.goto("/categorias/fruta");
   await main(page).getByRole("button", { name: "Añadir Naranjas de zumo" }).click();
   await expect(main(page).getByRole("group", { name: "Cantidad de Naranjas de zumo" })).toBeVisible();
+  // El contador de la cabecera viene del servidor: esperarlo antes de salir (si no, se corta el guardado)
+  await expect(page.getByRole("link", { name: /^Mi cesta: 1 productos/ })).toBeVisible();
   await page.goto("/buscar?q=lomo");
   await main(page).getByRole("button", { name: "Añadir Lomo de cerdo" }).click();
   await expect(main(page).getByRole("group", { name: "Cantidad de Lomo de cerdo" })).toBeVisible();
@@ -111,12 +113,19 @@ test("envío automático: el reparto se prepara sin confirmar y la cesta vuelve 
 
   // Parte de una cesta sin gambas (las añadirá después solo para un reparto)
   await lucia.goto("/buscar?q=gambas");
+  const add = main(lucia).getByRole("button", { name: "Añadir Gambas" });
   const exact = main(lucia).getByRole("button", { name: /Escribir la cantidad exacta de Gambas/ });
-  if (await exact.count()) {
+  // Primero, a que salga el resultado (con o sin gambas en la cesta): isVisible() no espera
+  await expect(add.or(exact)).toBeVisible();
+  if (await exact.isVisible()) {
+    const basketButton = lucia.getByRole("link", { name: /^Mi cesta: / });
+    const before = (await basketButton.getAttribute("aria-label"))!;
     await exact.click();
     await main(lucia).getByLabel("Cantidad exacta de Gambas").fill("0");
     await lucia.keyboard.press("Enter");
-    await expect(main(lucia).getByRole("button", { name: "Añadir Gambas" })).toBeVisible();
+    await expect(add).toBeVisible();
+    // Guardado en el servidor (el contador de la cabecera cambia) antes de salir de la página
+    await expect(basketButton).not.toHaveAttribute("aria-label", before);
   }
 
   // Guarda su cesta y activa el envío automático con ella

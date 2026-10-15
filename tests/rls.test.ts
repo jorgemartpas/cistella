@@ -16,6 +16,7 @@ const SHOP = {
   fruteriaB: "11111111-1111-4111-8111-000000000006",
 };
 const TEST_DATE = "2030-01-01";
+const OPEN_DATE = "2030-01-04";
 
 const service = createClient(url, serviceKey, { auth: { persistSession: false } });
 const anon = createClient(url, anonKey, { auth: { persistSession: false } });
@@ -37,6 +38,7 @@ let pauId: string;
 let dayId: string;
 let luciaOrderId: string;
 let pauOrderId: string;
+let openDayId: string;
 
 beforeAll(async () => {
   [lucia, pau, oskinez, fruteriaA, admin] = await Promise.all(
@@ -47,7 +49,13 @@ beforeAll(async () => {
   pauId = profiles!.find((p) => p.email === "pau@cistella.test")!.id;
 
   // Un día de reparto de prueba con un pedido para cada cliente
-  await service.from("delivery_days").delete().eq("date", TEST_DATE);
+  await service.from("delivery_days").delete().in("date", [TEST_DATE, OPEN_DATE]);
+  const { data: openDay } = await service
+    .from("delivery_days")
+    .insert({ date: OPEN_DATE, cutoff_at: "2030-01-03T19:00:00Z" })
+    .select("id")
+    .single();
+  openDayId = openDay!.id;
   const { data: day, error } = await service
     .from("delivery_days")
     .insert({ date: TEST_DATE, cutoff_at: "2029-12-31T19:00:00Z", fruteria_id: SHOP.fruteriaA, pescaderia_id: SHOP.ferrer })
@@ -93,6 +101,7 @@ afterAll(async () => {
     await service.from("orders").delete().eq("delivery_day_id", dayId);
     await service.from("delivery_days").delete().eq("id", dayId);
   }
+  if (openDayId) await service.from("delivery_days").delete().eq("id", openDayId);
   await service.from("profiles").update({ phone: "600111222" }).eq("id", luciaId);
 });
 
@@ -156,6 +165,27 @@ describe("cliente", () => {
     expect(okError).toBeNull();
     const { error } = await lucia.from("subscriptions").update({ status: "activa", cancel_at_period_end: true }).eq("customer_id", luciaId);
     expect(error?.message).toMatch(/No puedes cambiar/);
+  });
+
+  it("no puede cambiarse de plan por su cuenta (cada plan tiene su precio)", async () => {
+    const { error } = await lucia.from("subscriptions").update({ frequency: "dos_por_semana" }).eq("customer_id", luciaId);
+    expect(error?.message).toMatch(/No puedes cambiar/);
+  });
+
+  it("pide y anula repartos sueltos abiertos, solo suyos", async () => {
+    const ask = await lucia.from("delivery_requests").insert({ customer_id: luciaId, delivery_day_id: openDayId });
+    expect(ask.error).toBeNull();
+    const { data: others } = await pau.from("delivery_requests").select("customer_id").eq("delivery_day_id", openDayId);
+    expect(others).toEqual([]);
+    const forOther = await pau.from("delivery_requests").insert({ customer_id: luciaId, delivery_day_id: openDayId });
+    expect(forOther.error?.code).toBe("42501");
+    const cancel = await lucia.from("delivery_requests").delete().eq("delivery_day_id", openDayId).select("delivery_day_id");
+    expect(cancel.data).toHaveLength(1);
+  });
+
+  it("no puede pedir un reparto ya cerrado", async () => {
+    const { error } = await lucia.from("delivery_requests").insert({ customer_id: luciaId, delivery_day_id: dayId });
+    expect(error?.code).toBe("42501");
   });
 
   it("no crea pedidos ni toca la cesta de otro", async () => {

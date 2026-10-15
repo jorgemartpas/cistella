@@ -150,6 +150,8 @@ export type SavedList = {
   customer_id: string;
   kind: "lista" | "cesta";
   name: string;
+  /** Envío automático con esta cesta */
+  auto_delivery: boolean;
   created_at: string;
   updated_at: string;
 };

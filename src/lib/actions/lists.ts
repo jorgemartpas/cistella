@@ -5,37 +5,50 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { basketLockReason } from "@/lib/basket-rules";
+import { getScheduleRules } from "@/lib/delivery";
 import { normalizeQuantity, type ProductUnit } from "@/lib/domain/money";
+import { usesDayBaskets } from "@/lib/domain/subscription";
+import { copySavedBasketTo, defaultQuantity, savedBasketItems } from "@/lib/saved-baskets";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
 
 const nameSchema = z.string().trim().min(1, "Ponle un nombre.").max(60, "El nombre es demasiado largo.");
 
-/** Cantidad con la que entra un producto de una lista sin cantidad: medio kilo o una unidad */
-const defaultQuantity = (unit: ProductUnit) => (unit === "kg" ? 0.5 : 1);
+/** Cantidad con la que se guarda un producto: la que tenga en su cesta o, si no está, la de por defecto */
+async function quantityToSave(supabase: Awaited<ReturnType<typeof createClient>>, customerId: string, productId: string) {
+  const [{ data: inBasket }, { data: product }] = await Promise.all([
+    supabase.from("basket_items").select("quantity").eq("customer_id", customerId).eq("product_id", productId).limit(1),
+    supabase.from("products").select("unit").eq("id", productId).maybeSingle(),
+  ]);
+  if (inBasket?.[0]) return Number(inBasket[0].quantity);
+  return defaultQuantity((product?.unit ?? "unidad") as ProductUnit);
+}
 
-/** Crea una lista vacía (o con un producto, si se crea desde su tarjeta). */
-export async function createList(name: string, productId?: string): Promise<{ error?: string; id?: string }> {
+/** Crea una cesta guardada vacía (o con un producto, si se crea desde su tarjeta). */
+export async function createSavedBasket(name: string, productId?: string): Promise<{ error?: string; id?: string }> {
   const profile = await requireRole("cliente");
   const parsed = nameSchema.safeParse(name);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const supabase = await createClient();
   const { data: list, error } = await supabase
     .from("saved_lists")
-    .insert({ customer_id: profile.id, kind: "lista", name: parsed.data })
+    .insert({ customer_id: profile.id, kind: "cesta", name: parsed.data })
     .select("id")
     .single();
-  if (error || !list) return { error: "No se ha podido crear la lista." };
-  if (productId) await supabase.from("saved_list_items").insert({ list_id: list.id, product_id: productId });
+  if (error || !list) return { error: "No se ha podido crear la cesta." };
+  if (productId) {
+    const quantity = await quantityToSave(supabase, profile.id, productId);
+    await supabase.from("saved_list_items").insert({ list_id: list.id, product_id: productId, quantity });
+  }
   refresh();
   return { id: list.id };
 }
 
-/** Formulario «Nueva lista» de la página de listas. */
-export async function createListForm(_: ActionState, formData: FormData): Promise<ActionState> {
-  const result = await createList(String(formData.get("name") ?? ""));
+/** Formulario «Nueva cesta» de Cestas guardadas. */
+export async function createSavedBasketForm(_: ActionState, formData: FormData): Promise<ActionState> {
+  const result = await createSavedBasket(String(formData.get("name") ?? ""));
   if (result.error) return { error: result.error };
-  redirect(`/listas/${result.id}`);
+  redirect(`/cestas-guardadas/${result.id}`);
 }
 
 /** Guarda la cesta que se está llenando como cesta guardada, con sus cantidades. */
@@ -66,18 +79,43 @@ export async function saveBasket(_: ActionState, formData: FormData): Promise<Ac
     return { error: "No se ha podido guardar la cesta." };
   }
   refresh();
-  return { ok: `Guardada como «${parsed.data}». La tienes en Listas y cestas.` };
+  return { ok: `Guardada como «${parsed.data}». La tienes en Cestas guardadas.` };
 }
 
-/** Añade o quita un producto de una lista. */
+/** Marcador de un producto: lo añade a una cesta guardada (con su cantidad) o lo quita. */
 export async function setListItem(listId: string, productId: string, inList: boolean): Promise<{ error?: string }> {
-  await requireRole("cliente");
+  const profile = await requireRole("cliente");
   const supabase = await createClient();
   const { error } = inList
-    ? await supabase.from("saved_list_items").upsert({ list_id: listId, product_id: productId }, { ignoreDuplicates: true })
+    ? await supabase
+        .from("saved_list_items")
+        .upsert(
+          { list_id: listId, product_id: productId, quantity: await quantityToSave(supabase, profile.id, productId) },
+          { onConflict: "list_id,product_id", ignoreDuplicates: true },
+        )
     : await supabase.from("saved_list_items").delete().eq("list_id", listId).eq("product_id", productId);
-  // RLS solo deja tocar las listas propias
-  if (error) return { error: "No se ha podido cambiar la lista." };
+  // RLS solo deja tocar las cestas propias
+  if (error) return { error: "No se ha podido cambiar la cesta guardada." };
+  await supabase.from("saved_lists").update({ updated_at: new Date().toISOString() }).eq("id", listId);
+  refresh();
+  return {};
+}
+
+/** Cambia la cantidad de un producto en una cesta guardada (0 lo quita). Firma de QuantityStepper. */
+export async function setSavedBasketQuantity(listId: string, productId: string, quantity: number): Promise<{ error?: string }> {
+  await requireRole("cliente");
+  const supabase = await createClient();
+  if (quantity <= 0) {
+    await supabase.from("saved_list_items").delete().eq("list_id", listId).eq("product_id", productId);
+  } else {
+    const { data: product } = await supabase.from("products").select("unit").eq("id", productId).maybeSingle();
+    const rounded = normalizeQuantity(quantity, (product?.unit ?? "unidad") as ProductUnit);
+    if (!(rounded > 0) || rounded > 50) return { error: "Esa cantidad no es válida." };
+    const { error } = await supabase
+      .from("saved_list_items")
+      .upsert({ list_id: listId, product_id: productId, quantity: rounded }, { onConflict: "list_id,product_id" });
+    if (error) return { error: "No se ha podido guardar el cambio." };
+  }
   await supabase.from("saved_lists").update({ updated_at: new Date().toISOString() }).eq("id", listId);
   refresh();
   return {};
@@ -100,54 +138,80 @@ export async function renameList(_: ActionState, formData: FormData): Promise<Ac
 export async function deleteList(listId: string): Promise<void> {
   await requireRole("cliente");
   const supabase = await createClient();
-  const { data: list } = await supabase.from("saved_lists").select("kind").eq("id", listId).maybeSingle();
   await supabase.from("saved_lists").delete().eq("id", listId);
-  redirect(`/listas?ver=${list?.kind === "cesta" ? "cestas" : "listas"}`);
+  redirect("/cestas-guardadas");
 }
 
 /**
- * Lleva una lista o cesta guardada a la cesta que se está llenando. Una cesta guardada la
- * sustituye entera; una lista añade los productos que falten (sin tocar los que ya estén).
+ * Lleva una cesta guardada a la cesta que se está llenando: «sustituir» la cambia entera;
+ * «añadir» suma los productos que falten, sin tocar los que ya estén.
  */
-export async function applyList(listId: string, slot: number): Promise<{ error?: string; ok?: string }> {
+export async function applyList(
+  listId: string,
+  slot: number,
+  mode: "sustituir" | "añadir",
+): Promise<{ error?: string; ok?: string }> {
   const profile = await requireRole("cliente");
   const supabase = await createClient();
   const locked = await basketLockReason(supabase, profile.id, slot);
   if (locked) return { error: locked };
 
-  const [{ data: list }, { data: items }] = await Promise.all([
-    supabase.from("saved_lists").select("kind").eq("id", listId).maybeSingle(),
-    supabase.from("saved_list_items").select("quantity, products(id, unit, active)").eq("list_id", listId),
-  ]);
-  if (!list) return { error: "Esa lista ya no existe." };
-  const usable = (items ?? [])
-    .map((i) => ({ quantity: i.quantity as number | null, product: i.products as unknown as { id: string; unit: ProductUnit; active: boolean } | null }))
-    .filter((i) => i.product?.active);
-  if (usable.length === 0) return { error: "No tiene ningún producto que esté a la venta ahora." };
-
-  const rows = usable.map(({ quantity, product }) => ({
-    customer_id: profile.id,
-    slot,
-    product_id: product!.id,
-    quantity: normalizeQuantity(Number(quantity ?? defaultQuantity(product!.unit)), product!.unit),
-  }));
-
-  if (list.kind === "cesta") {
-    const { error: deleteError } = await supabase.from("basket_items").delete().eq("customer_id", profile.id).eq("slot", slot);
-    if (deleteError) return { error: "No se ha podido cambiar tu cesta." };
-    const { error } = await supabase.from("basket_items").insert(rows);
+  if (mode === "sustituir") {
+    const { error } = await copySavedBasketTo(supabase, profile.id, listId, slot);
     if (error) return { error: "No se ha podido cambiar tu cesta." };
   } else {
-    const { error } = await supabase
-      .from("basket_items")
-      .upsert(rows, { onConflict: "customer_id,slot,product_id", ignoreDuplicates: true });
+    const items = await savedBasketItems(supabase, listId);
+    if (items.length === 0) return { error: "No tiene ningún producto que esté a la venta ahora." };
+    const { error } = await supabase.from("basket_items").upsert(
+      items.map((i) => ({ customer_id: profile.id, slot, product_id: i.productId, quantity: i.quantity })),
+      { onConflict: "customer_id,slot,product_id", ignoreDuplicates: true },
+    );
     if (error) return { error: "No se han podido añadir los productos." };
   }
   refresh();
   return {
     ok:
-      list.kind === "cesta"
+      mode === "sustituir"
         ? "Hecho: tu cesta es ahora esta cesta guardada."
         : "Hecho: los productos que no tenías ya están en tu cesta.",
   };
+}
+
+/**
+ * Activa (o quita) el envío automático con una cesta guardada: cada reparto del plan se prepara
+ * solo, sin confirmar, y después la cesta vuelve a ser esta. Al activarlo, la cesta pasa a ser
+ * esta ya. Solo una cesta automática; solo en los planes con reparto fijo.
+ */
+export async function setAutoDelivery(listId: string, on: boolean): Promise<{ error?: string; ok?: string }> {
+  const profile = await requireRole("cliente");
+  const supabase = await createClient();
+  if (!on) {
+    await supabase.from("saved_lists").update({ auto_delivery: false }).eq("id", listId);
+    refresh();
+    return { ok: "Envío automático desactivado. Desde ahora confirmas tú cada pedido." };
+  }
+
+  const { data: sub } = await supabase.from("subscriptions").select("status, frequency").eq("customer_id", profile.id).maybeSingle();
+  if (sub?.status !== "activa") return { error: "Para el envío automático necesitas un plan activo." };
+  if (sub.frequency === "por_envio") {
+    return { error: "El envío automático es para los planes con reparto fijo. En pago por envío pides cada reparto." };
+  }
+  if ((await savedBasketItems(supabase, listId)).length === 0) {
+    return { error: "Esta cesta está vacía: añade algo antes de activar el envío automático." };
+  }
+
+  // La cesta (o las del martes y el viernes, en 2 veces por semana) pasa a ser esta ya
+  const slots = usesDayBaskets(sub.frequency)
+    ? (await getScheduleRules(supabase)).filter((r) => r.active).map((r) => r.weekday)
+    : [0];
+  for (const slot of slots) {
+    const locked = await basketLockReason(supabase, profile.id, slot);
+    if (locked) return { error: locked };
+  }
+  await supabase.from("saved_lists").update({ auto_delivery: false }).eq("customer_id", profile.id).eq("auto_delivery", true);
+  const { error } = await supabase.from("saved_lists").update({ auto_delivery: true }).eq("id", listId);
+  if (error) return { error: "No se ha podido activar el envío automático." };
+  for (const slot of slots) await copySavedBasketTo(supabase, profile.id, listId, slot);
+  refresh();
+  return { ok: "Envío automático activado: tus próximos repartos se preparan solos con esta cesta." };
 }

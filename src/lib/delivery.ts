@@ -4,7 +4,8 @@ import { addDays, daysBetween, isoWeekday, madridDate, type ISODate } from "@/li
 import { planOrdersForDay, type PlannedOrder, type ProductCategory } from "@/lib/domain/orders";
 import { nextInRotation, rotationQueue } from "@/lib/domain/rotation";
 import { nextOpenDate, nextOpenDateForWeekday, upcomingDeliveryDates, type ScheduleRule } from "@/lib/domain/schedule";
-import { isDueOn, needsWeekday, type DeliveryFrequency, type SubscriptionCadence } from "@/lib/domain/subscription";
+import { basketSlotFor, isDueOn, needsWeekday, type DeliveryFrequency, type SubscriptionCadence } from "@/lib/domain/subscription";
+import { copySavedBasketTo } from "@/lib/saved-baskets";
 import type { DeliveryDay, DeliveryScheduleRow, GenerationReport, Shop, Subscription } from "@/lib/types";
 
 export async function getScheduleRules(supabase: SupabaseClient): Promise<ScheduleRule[]> {
@@ -61,6 +62,17 @@ async function confirmedDayIds(supabase: SupabaseClient, customerId: string, day
   return new Set((data ?? []).map((r) => r.delivery_day_id as string));
 }
 
+/** IDs de los días de reparto que el cliente ha saltado (con envío automático), de entre los dados. */
+export async function skippedDayIds(supabase: SupabaseClient, customerId: string, dayIds: string[]): Promise<Set<string>> {
+  if (dayIds.length === 0) return new Set();
+  const { data } = await supabase
+    .from("delivery_skips")
+    .select("delivery_day_id")
+    .eq("customer_id", customerId)
+    .in("delivery_day_id", dayIds);
+  return new Set((data ?? []).map((r) => r.delivery_day_id as string));
+}
+
 /**
  * Próximo reparto fijo que le toca a una suscripción y que aún admite cambios (opcionalmente,
  * solo de un día de la semana), y si el cliente ya lo ha confirmado. Usa los días ya generados
@@ -103,6 +115,8 @@ export async function closingDayFor(
   supabase: SupabaseClient,
   sub: Pick<Subscription, "customer_id" | "status" | "frequency" | "delivery_weekday" | "anchor_date">,
   now: Date,
+  /** Tiene envío automático: los repartos que le tocan cuentan como confirmados, salvo los saltados */
+  auto = false,
 ): Promise<DeliveryDay | null> {
   const { data } = await supabase
     .from("delivery_days")
@@ -111,12 +125,39 @@ export async function closingDayFor(
     .is("orders_generated_at", null)
     .lte("cutoff_at", now.toISOString());
   const closing = (data as DeliveryDay[] | null) ?? [];
-  const confirmed = await confirmedDayIds(supabase, sub.customer_id, closing.map((d) => d.id));
+  const ids = closing.map((d) => d.id);
+  const [confirmed, skipped] = await Promise.all([
+    confirmedDayIds(supabase, sub.customer_id, ids),
+    auto ? skippedDayIds(supabase, sub.customer_id, ids) : Promise.resolve(new Set<string>()),
+  ]);
   return (
-    closing.find(
-      (d) => confirmed.has(d.id) && (sub.frequency === "por_envio" || isDueOn(toCadence(sub), d.date)),
-    ) ?? null
+    closing.find((d) => {
+      if (sub.frequency === "por_envio") return confirmed.has(d.id);
+      if (!isDueOn(toCadence(sub), d.date)) return false;
+      return confirmed.has(d.id) || (auto && !skipped.has(d.id));
+    }) ?? null
   );
+}
+
+/** Admin: cuántos clientes han confirmado un reparto abierto y cuántos más lo tienen automático. */
+export async function dayDemand(supabase: SupabaseClient, day: DeliveryDay): Promise<{ confirmed: number; automatic: number }> {
+  const [{ data: requests }, { data: autoLists }, { data: skips }] = await Promise.all([
+    supabase.from("delivery_requests").select("customer_id").eq("delivery_day_id", day.id),
+    supabase.from("saved_lists").select("customer_id").eq("auto_delivery", true),
+    supabase.from("delivery_skips").select("customer_id").eq("delivery_day_id", day.id),
+  ]);
+  const confirmed = new Set((requests ?? []).map((r) => r.customer_id as string));
+  const skipped = new Set((skips ?? []).map((r) => r.customer_id as string));
+  const autoIds = (autoLists ?? []).map((l) => l.customer_id as string).filter((id) => !confirmed.has(id) && !skipped.has(id));
+  if (autoIds.length === 0) return { confirmed: confirmed.size, automatic: 0 };
+  const { data: subs } = await supabase
+    .from("subscriptions")
+    .select("customer_id, status, frequency, delivery_weekday, anchor_date")
+    .eq("status", "activa")
+    .neq("frequency", "por_envio")
+    .in("customer_id", autoIds);
+  const automatic = (subs ?? []).filter((s) => isDueOn(toCadence(s), day.date)).length;
+  return { confirmed: confirmed.size, automatic };
 }
 
 export type RequestableDay = { day: DeliveryDay; requested: boolean };
@@ -207,13 +248,18 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
   const { data: day } = await service.from("delivery_days").select("*").eq("id", dayId).single<DeliveryDay>();
   if (!day || day.status !== "abierto" || day.orders_generated_at) return null;
 
-  const [{ data: subsData, error: subsError }, { data: requestsData }] = await Promise.all([
-    service.from("subscriptions").select("customer_id, status, frequency, delivery_weekday, anchor_date").eq("status", "activa"),
-    service.from("delivery_requests").select("customer_id").eq("delivery_day_id", day.id),
-  ]);
+  const [{ data: subsData, error: subsError }, { data: requestsData }, { data: autoData }, { data: skipsData }] =
+    await Promise.all([
+      service.from("subscriptions").select("customer_id, status, frequency, delivery_weekday, anchor_date").eq("status", "activa"),
+      service.from("delivery_requests").select("customer_id").eq("delivery_day_id", day.id),
+      service.from("saved_lists").select("id, customer_id").eq("auto_delivery", true),
+      service.from("delivery_skips").select("customer_id").eq("delivery_day_id", day.id),
+    ]);
   if (subsError) throw subsError;
-  // Confirmaciones del día (en pago por envío, los repartos pedidos)
+  // Confirmaciones del día (en pago por envío, los repartos pedidos), envío automático y saltados
   const requested = new Set((requestsData ?? []).map((r) => r.customer_id as string));
+  const autoBasket = new Map((autoData ?? []).map((l) => [l.customer_id as string, l.id as string]));
+  const skipped = new Set((skipsData ?? []).map((r) => r.customer_id as string));
   const subs = (subsData ?? []).filter((s) =>
     s.frequency === "por_envio" ? requested.has(s.customer_id) : isDueOn(toCadence(s), day.date),
   );
@@ -254,6 +300,8 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
         postalCode: p?.postal_code ?? null,
         subscription: toCadence(s),
         confirmed: requested.has(s.customer_id),
+        autoDelivery: autoBasket.has(s.customer_id),
+        skipped: skipped.has(s.customer_id),
       };
     }),
     basket: basketRows.map((b) => ({
@@ -295,6 +343,16 @@ export async function closeDeliveryDay(service: SupabaseClient, dayId: string): 
     p_report: report,
   });
   if (error) throw error;
+
+  // Envío automático: después de cada reparto, la cesta vuelve a ser la guardada
+  if (Number(created ?? 0) > 0) {
+    const frequencyOf = new Map(subs.map((s) => [s.customer_id, s.frequency as DeliveryFrequency]));
+    for (const order of plan.orders) {
+      const listId = autoBasket.get(order.customerId);
+      if (!listId) continue;
+      await copySavedBasketTo(service, order.customerId, listId, basketSlotFor(frequencyOf.get(order.customerId)!, day.date));
+    }
+  }
   return { date: day.date, orders: Number(created ?? 0), skipped: plan.skippedCustomers.length };
 }
 

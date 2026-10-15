@@ -30,7 +30,13 @@ export async function basketLockReason(
   }
 
   if (sub?.status === "activa") {
-    const closing = await closingDayFor(supabase, sub, new Date());
+    const { data: auto } = await supabase
+      .from("saved_lists")
+      .select("id")
+      .eq("customer_id", customerId)
+      .eq("auto_delivery", true)
+      .maybeSingle();
+    const closing = await closingDayFor(supabase, sub, new Date(), Boolean(auto));
     if (closing) {
       return `Estamos cerrando el reparto del ${DATE_FORMAT.format(new Date(closing.date))}. En unos minutos podrás cambiar la cesta para el siguiente.`;
     }

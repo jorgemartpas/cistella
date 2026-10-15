@@ -10,6 +10,7 @@ import {
   getScheduleRules,
   nextDeliveryFor,
   requestableDays,
+  skippedDayIds,
   type RequestableDay,
   type UpcomingDelivery,
 } from "@/lib/delivery";
@@ -49,8 +50,10 @@ export type ClientContext = {
   next: UpcomingDelivery | null;
   /** Pago por envío: próximos repartos y si los ha pedido */
   requestable: RequestableDay[];
-  /** Reparto que se confirma desde la cesta */
-  toConfirm: { day: DeliveryDay; confirmed: boolean } | null;
+  /** Cesta guardada con envío automático (planes con reparto fijo): los repartos se preparan solos */
+  autoBasket: { id: string; name: string } | null;
+  /** Reparto que se confirma desde la cesta (con envío automático: que se puede saltar) */
+  toConfirm: { day: DeliveryDay; confirmed: boolean; auto: boolean; skipped: boolean } | null;
   /** Reparto del cliente que se está cerrando ahora mismo (la cesta no se toca) */
   closing: DeliveryDay | null;
   /** Productos que la tienda de turno no tiene para el próximo reparto */
@@ -94,6 +97,15 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
   const plan = sub?.frequency ?? "semanal";
   const isActive = sub?.status === "activa";
   const perDelivery = plan === "por_envio";
+  const { data: autoRow } = profile
+    ? await supabase
+        .from("saved_lists")
+        .select("id, name")
+        .eq("customer_id", profile.id)
+        .eq("auto_delivery", true)
+        .maybeSingle<{ id: string; name: string }>()
+    : { data: null };
+  const auto = Boolean(autoRow) && !perDelivery;
   const dayBaskets = usesDayBaskets(plan);
   const weekdays = rules.filter((r) => r.active).map((r) => r.weekday);
   const chosenDay = Number(cookieStore.get(BASKET_DAY_COOKIE)?.value);
@@ -115,7 +127,9 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
       next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
     }
   }
-  const closing = isActive && sub ? await closingDayFor(supabase, sub, now) : null;
+  const closing = isActive && sub ? await closingDayFor(supabase, sub, now, auto) : null;
+  const nextSkipped =
+    auto && profile && next?.day ? (await skippedDayIds(supabase, profile.id, [next.day.id])).has(next.day.id) : false;
 
   const firstRequested = requestable.find((r) => r.requested);
   // En pago por envío se confirma el primero pedido (o el primero abierto, para pedirlo)
@@ -124,10 +138,10 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
     ? null
     : perDelivery
       ? firstRequestable
-        ? { day: firstRequestable.day, confirmed: firstRequestable.requested }
+        ? { day: firstRequestable.day, confirmed: firstRequestable.requested, auto: false, skipped: false }
         : null
       : next?.day
-        ? { day: next.day, confirmed: next.confirmed }
+        ? { day: next.day, confirmed: next.confirmed || (auto && !nextSkipped), auto, skipped: nextSkipped }
         : null;
 
   const upcomingDay = next?.day ?? firstRequested?.day ?? null;
@@ -160,6 +174,7 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
     basketTotalCents: inBasket.reduce((sum, [id, q]) => sum + lineTotalCents(q, productById.get(id)!.price_cents), 0),
     next,
     requestable,
+    autoBasket: autoRow ?? null,
     toConfirm,
     closing,
     unavailable: new Set<string>((unavailableIds as string[] | null) ?? []),

@@ -106,3 +106,20 @@ export async function chooseBasketDay(weekday: number): Promise<void> {
   (await cookies()).set(BASKET_DAY_COOKIE, String(weekday), { path: "/", maxAge: 60 * 60 * 24 * 180, sameSite: "lax" });
   refresh();
 }
+
+/**
+ * Envío automático: salta (o recupera) un reparto concreto. Solo hasta su hora de cierre.
+ * Al saltarlo se anula también la confirmación que hubiera.
+ */
+export async function setDeliverySkip(dayId: string, skip: boolean): Promise<{ error?: string }> {
+  const profile = await requireRole("cliente");
+  const supabase = await createClient();
+  const { error } = skip
+    ? await supabase.from("delivery_skips").insert({ customer_id: profile.id, delivery_day_id: dayId })
+    : await supabase.from("delivery_skips").delete().eq("customer_id", profile.id).eq("delivery_day_id", dayId);
+  // RLS solo deja saltar o recuperar repartos abiertos y antes de su cierre
+  if (error && error.code !== "23505") return { error: "Ese reparto ya está cerrado." };
+  if (skip) await supabase.from("delivery_requests").delete().eq("customer_id", profile.id).eq("delivery_day_id", dayId);
+  refresh();
+  return {};
+}

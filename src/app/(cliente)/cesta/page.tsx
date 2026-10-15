@@ -8,6 +8,7 @@ import { ActionForm, SubmitButton } from "@/components/forms";
 import { Icon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { QuantityStepper } from "@/components/quantity-stepper";
+import { ClearBasketButton } from "@/components/store/clear-basket-button";
 import { DeliveryBar } from "@/components/store/delivery-bar";
 import { ButtonLink, EmptyState, Input, Notice, PageSkeleton } from "@/components/ui";
 import { saveBasket } from "@/lib/actions/lists";
@@ -74,6 +75,12 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
       ) : (
         <div className="md:grid md:grid-cols-[1fr_20rem] md:items-start md:gap-8">
           <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-muted">
+                {inBasket.length === 1 ? "1 producto" : `${inBasket.length} productos`}
+              </p>
+              <ClearBasketButton slot={ctx.slot} count={ctx.basket.size} />
+            </div>
             <ul className="card-surface divide-y divide-border">
               {inBasket.map((product) => {
                 const quantity = ctx.basket.get(product.id)!;

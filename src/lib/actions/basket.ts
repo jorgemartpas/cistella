@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { basketLockReason } from "@/lib/basket-rules";
 import { BASKET_DAY_COOKIE } from "@/lib/client-context";
 import { toCadence } from "@/lib/delivery";
-import { setGuestBasketQuantity } from "@/lib/guest-basket";
+import { clearGuestBasket, setGuestBasketQuantity } from "@/lib/guest-basket";
 import { normalizeQuantity, type ProductUnit } from "@/lib/domain/money";
 import { basketSlotFor, isDueOn } from "@/lib/domain/subscription";
 import { createClient } from "@/lib/supabase/server";
@@ -59,6 +59,24 @@ export async function setBasketQuantity(productId: string, quantity: number, slo
       { onConflict: "customer_id,slot,product_id" },
     );
   if (error) return { error: "No se ha podido guardar el cambio. Inténtalo de nuevo." };
+  refresh();
+  return {};
+}
+
+/** Quita todos los productos de la cesta (`slot`: la del día en el plan de 2 veces por semana). */
+export async function clearBasket(slot = 0): Promise<{ error?: string }> {
+  const profile = await getCurrentProfile();
+  if (profile && profile.role !== "cliente") return { error: "Las tiendas y el equipo no tienen cesta." };
+  if (!profile) {
+    await clearGuestBasket();
+    refresh();
+    return {};
+  }
+  const supabase = await createClient();
+  const locked = await basketLockReason(supabase, profile.id, slot);
+  if (locked) return { error: locked };
+  const { error } = await supabase.from("basket_items").delete().eq("customer_id", profile.id).eq("slot", slot);
+  if (error) return { error: "No se ha podido vaciar la cesta. Inténtalo de nuevo." };
   refresh();
   return {};
 }

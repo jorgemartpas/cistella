@@ -20,6 +20,11 @@ export async function setGuestBasketQuantity(productId: string, quantity: number
   store.set(COOKIE, updateGuestBasket(parseGuestBasket(store.get(COOKIE)?.value), productId, quantity), COOKIE_OPTIONS);
 }
 
+/** Vacía la cesta del visitante (solo en Server Actions). */
+export async function clearGuestBasket(): Promise<void> {
+  (await cookies()).delete(COOKIE);
+}
+
 /**
  * Al crear la cuenta o entrar: lleva la cesta del visitante a la del cliente (lo que ya tuviera
  * se mantiene; si un producto está en las dos, manda la cantidad del visitante) y borra la cookie.

@@ -161,3 +161,18 @@ test("envío automático: el reparto se prepara sin confirmar y la cesta vuelve 
   await main(lucia).getByRole("button", { name: "Quitar el envío automático" }).click();
   await expect(main(lucia).getByText(/Envío automático desactivado/)).toBeVisible();
 });
+
+test("vaciar la cesta: quita todos los productos de una vez", async ({ page }) => {
+  // Visitante sin cuenta (la cesta va en una cookie): así no toca la cesta de los clientes de ejemplo
+  await page.goto("/categorias/fruta");
+  await main(page).getByRole("button", { name: "Añadir Naranjas de zumo" }).click();
+  await expect(main(page).getByRole("group", { name: "Cantidad de Naranjas de zumo" })).toBeVisible();
+  await main(page).getByRole("button", { name: "Añadir Manzana fuji" }).click();
+  await expect(page.getByRole("link", { name: /^Mi cesta: 2 productos/ })).toBeVisible();
+
+  await page.goto("/cesta");
+  page.once("dialog", (dialog) => dialog.accept());
+  await main(page).getByRole("button", { name: "Vaciar la cesta" }).click();
+  await expect(main(page).getByText("Tu cesta está vacía")).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Mi cesta: 0 productos/ })).toBeVisible();
+});

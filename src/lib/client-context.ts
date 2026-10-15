@@ -1,7 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { cache } from "react";
-import { requireRole } from "@/lib/auth";
+import { getCurrentProfile, HOME_BY_ROLE } from "@/lib/auth";
 import { getProducts, getShops } from "@/lib/catalog";
 import {
   closingDayFor,
@@ -16,6 +17,7 @@ import { lineTotalCents } from "@/lib/domain/money";
 import type { ScheduleRule } from "@/lib/domain/schedule";
 import { rankUsualProducts } from "@/lib/domain/usual";
 import { usesDayBaskets, type DeliveryFrequency } from "@/lib/domain/subscription";
+import { readGuestBasket } from "@/lib/guest-basket";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { DeliveryDay, Product, Profile, Settings, Shop, Subscription } from "@/lib/types";
 
@@ -23,7 +25,9 @@ import type { DeliveryDay, Product, Profile, Settings, Shop, Subscription } from
 export const BASKET_DAY_COOKIE = "cistella_dia";
 
 export type ClientContext = {
-  profile: Profile;
+  /** null: visitante sin cuenta (ve la tienda y llena la cesta; la cuenta se crea al confirmar) */
+  profile: Profile | null;
+  isGuest: boolean;
   sub: Subscription | null;
   settings: Settings | null;
   rules: ScheduleRule[];
@@ -53,22 +57,36 @@ export type ClientContext = {
   unavailable: Set<string>;
 };
 
+/** Cliente con sesión: el contexto, o a /entrar si es un visitante. */
+export async function getCustomerContext(): Promise<ClientContext & { profile: Profile }> {
+  const ctx = await getClientContext();
+  if (!ctx.profile) redirect("/entrar");
+  return ctx as ClientContext & { profile: Profile };
+}
+
 /**
- * Todo lo que necesitan las páginas del cliente (y la cabecera, con el botón de la cesta),
- * cargado una vez por petición.
+ * Todo lo que necesitan las páginas de la tienda (y la cabecera, con el botón de la cesta),
+ * cargado una vez por petición. Sirve también para visitantes sin cuenta.
  */
 export const getClientContext = cache(async (): Promise<ClientContext> => {
-  const profile = await requireRole("cliente");
+  const profile = await getCurrentProfile();
+  if (profile && profile.role !== "cliente") redirect(HOME_BY_ROLE[profile.role]);
   const supabase = await createClient();
   const now = new Date();
 
   const [{ data: sub }, products, shops, rules, { data: basketRows }, { data: settings }, cookieStore] =
     await Promise.all([
-      supabase.from("subscriptions").select("*").eq("customer_id", profile.id).maybeSingle<Subscription>(),
+      profile
+        ? supabase.from("subscriptions").select("*").eq("customer_id", profile.id).maybeSingle<Subscription>()
+        : Promise.resolve({ data: null }),
       getProducts(supabase, { onlyActive: true }),
       getShops(supabase),
       getScheduleRules(supabase),
-      supabase.from("basket_items").select("product_id, quantity, slot").eq("customer_id", profile.id),
+      profile
+        ? supabase.from("basket_items").select("product_id, quantity, slot").eq("customer_id", profile.id)
+        : readGuestBasket().then((guest) => ({
+            data: [...guest].map(([product_id, quantity]) => ({ product_id, quantity, slot: 0 })),
+          })),
       supabase.from("settings").select("*").single<Settings>(),
       cookies(),
     ]);
@@ -83,13 +101,13 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
 
   let next: UpcomingDelivery | null = null;
   let requestable: RequestableDay[] = [];
-  if (isActive && perDelivery) {
+  if (profile && isActive && perDelivery) {
     requestable = await requestableDays(supabase, profile.id, now);
     if (requestable.length === 0) {
       await ensureDeliveryDays(createServiceClient(), now);
       requestable = await requestableDays(supabase, profile.id, now);
     }
-  } else if (isActive) {
+  } else if (profile && sub && isActive) {
     next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
     // Para poder confirmarlo, el día de reparto tiene que existir
     if (next && !next.day) {
@@ -125,6 +143,7 @@ export const getClientContext = cache(async (): Promise<ClientContext> => {
 
   return {
     profile,
+    isGuest: !profile,
     sub: sub ?? null,
     settings: settings ?? null,
     rules,
@@ -156,7 +175,8 @@ export type ListMembership = {
 
 /** Listas del cliente y qué productos hay en cada una (para el botón de guardar en lista). */
 export const getListMembership = cache(async (): Promise<ListMembership> => {
-  const profile = await requireRole("cliente");
+  const profile = await getCurrentProfile();
+  if (profile?.role !== "cliente") return { lists: [], byProduct: new Map() };
   const supabase = await createClient();
   const { data: lists } = await supabase
     .from("saved_lists")
@@ -177,7 +197,8 @@ export const getListMembership = cache(async (): Promise<ListMembership> => {
 
 /** «Mis habituales»: lo que más ha pedido el cliente en sus pedidos entregados (si no hay, ninguno). */
 export const getUsualProductIds = cache(async (): Promise<string[]> => {
-  const profile = await requireRole("cliente");
+  const profile = await getCurrentProfile();
+  if (profile?.role !== "cliente") return [];
   const supabase = await createClient();
   const { data } = await supabase
     .from("orders")

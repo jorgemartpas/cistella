@@ -15,7 +15,7 @@ export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
 });
 
 export const HOME_BY_ROLE: Record<UserRole, string> = {
-  cliente: "/cesta",
+  cliente: "/",
   tienda: "/tienda",
   admin: "/admin",
 };

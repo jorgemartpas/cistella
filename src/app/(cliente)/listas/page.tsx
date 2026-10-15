@@ -8,7 +8,7 @@ import { ProductGrid } from "@/components/store/product-grid";
 import { Tabs } from "@/components/store/tabs";
 import { EmptyState, Input, PageSkeleton } from "@/components/ui";
 import { createListForm } from "@/lib/actions/lists";
-import { getClientContext, getUsualProductIds } from "@/lib/client-context";
+import { getCustomerContext, getUsualProductIds } from "@/lib/client-context";
 import { formatEuros, lineTotalCents } from "@/lib/domain/money";
 import { WEEKDAY_NAMES } from "@/lib/domain/schedule";
 import { plural } from "@/lib/format";
@@ -46,7 +46,7 @@ async function Lists({ searchParams }: Pick<PageProps<"/listas">, "searchParams"
 }
 
 async function Usual() {
-  const [ctx, ids] = await Promise.all([getClientContext(), getUsualProductIds()]);
+  const [ctx, ids] = await Promise.all([getCustomerContext(), getUsualProductIds()]);
   const byId = new Map(ctx.products.map((p) => [p.id, p]));
   const products = ids.flatMap((id) => byId.get(id) ?? []);
   if (products.length === 0) {
@@ -60,7 +60,7 @@ async function Usual() {
 }
 
 async function SavedLists() {
-  const ctx = await getClientContext();
+  const ctx = await getCustomerContext();
   const supabase = await createClient();
   const { data } = await supabase
     .from("saved_lists")
@@ -111,7 +111,7 @@ async function SavedLists() {
 }
 
 async function SavedBaskets() {
-  const ctx = await getClientContext();
+  const ctx = await getCustomerContext();
   const supabase = await createClient();
   const { data } = await supabase
     .from("saved_lists")

@@ -9,7 +9,7 @@ import { Icon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { DeliveryBar } from "@/components/store/delivery-bar";
-import { ButtonLink, EmptyState, Input, PageSkeleton } from "@/components/ui";
+import { ButtonLink, EmptyState, Input, Notice, PageSkeleton } from "@/components/ui";
 import { saveBasket } from "@/lib/actions/lists";
 import { CATEGORY_ORDER } from "@/lib/catalog";
 import { getClientContext } from "@/lib/client-context";
@@ -31,10 +31,13 @@ export default function BasketPage({ searchParams }: PageProps<"/cesta">) {
 
 async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams">) {
   // Enlaces antiguos a las pestañas de categorías de la cesta
-  const { ver } = await searchParams;
+  const { ver, confirmar } = await searchParams;
   if (CATEGORY_ORDER.includes(ver as ProductCategory)) redirect(`/categorias/${ver}`);
 
   const ctx = await getClientContext();
+  const hasPlan = Boolean(ctx.sub && ["activa", "pausada", "impagada"].includes(ctx.sub.status));
+  // Venía a confirmar y acaba de entrar sin plan: a elegirlo (y vuelve aquí con el pedido confirmado)
+  if (confirmar === "1" && ctx.profile && !hasPlan) redirect("/bienvenida?confirmar=1");
   const shopName = new Map(ctx.shops.map((s) => [s.id, s.name]));
   const inBasket = CATEGORY_ORDER.flatMap((c) => ctx.products.filter((p) => p.category === c && ctx.basket.has(p.id)));
   const retired = ctx.basket.size - inBasket.length;
@@ -49,10 +52,15 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
       <p className="mb-6 mt-0.5 text-sm text-muted">
         Se guarda sola. Antes de cada reparto, revísala y confirma el pedido.
       </p>
-
-      {ctx.perDelivery && ctx.isActive && (
-        <RequestDays days={ctx.requestable} feeCents={feeCents} />
+      {confirmar === "1" && ctx.isActive && (
+        <div className="mb-6">
+          <Notice tone="success" title="¡Bienvenida a Cistella! Tu plan ya está activo.">
+            Confirmamos tu primer pedido con esta cesta. Puedes seguir cambiándola hasta la hora de cierre.
+          </Notice>
+        </div>
       )}
+
+      {ctx.perDelivery && ctx.isActive && <RequestDays days={ctx.requestable} feeCents={feeCents} />}
 
       {inBasket.length === 0 ? (
         <EmptyState icon="🧺" title="Tu cesta está vacía">
@@ -77,7 +85,9 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
                         {product.shop_id && ` · ${shopName.get(product.shop_id)}`}
                       </p>
                       {ctx.unavailable.has(product.id) && (
-                        <p className="text-xs font-medium text-warning">No lo tiene la tienda de turno del próximo reparto</p>
+                        <p className="text-xs font-medium text-warning">
+                          No lo tiene la tienda de turno del próximo reparto
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-4">
@@ -98,8 +108,8 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
             </ul>
             {retired > 0 && (
               <p className="mt-3 text-sm text-muted">
-                {retired === 1 ? "Un producto de tu cesta ya no está" : `${retired} productos de tu cesta ya no están`} a la
-                venta y no se incluirá.
+                {retired === 1 ? "Un producto de tu cesta ya no está" : `${retired} productos de tu cesta ya no están`}{" "}
+                a la venta y no se incluirá.
               </p>
             )}
             <Link
@@ -138,38 +148,80 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
                   El pedido mínimo es de {formatEuros(minOrderCents)}. Con menos, ese reparto no se prepara.
                 </p>
               )}
-              {ctx.toConfirm && (
-                <ConfirmOrder
-                  key={ctx.toConfirm.day.id}
-                  dayId={ctx.toConfirm.day.id}
-                  confirmed={ctx.toConfirm.confirmed}
-                  dayLabel={formatDay(ctx.toConfirm.day.date)}
-                  cutoffLabel={formatCutoff(ctx.toConfirm.day.cutoff_at)}
-                  note={feeCents > 0 ? `Se suman ${formatEuros(feeCents)} de envío.` : undefined}
+              {ctx.isGuest ? (
+                <ConfirmWithAccount
+                  href={`/registro?volver=${encodeURIComponent("/bienvenida?confirmar=1")}`}
+                  text="Para confirmar, crea tu cuenta y elige tu plan. Tu cesta no se pierde."
+                  login={`/entrar?volver=${encodeURIComponent("/cesta?confirmar=1")}`}
                 />
+              ) : !hasPlan ? (
+                <ConfirmWithAccount
+                  href="/bienvenida?confirmar=1"
+                  text="Para confirmarlo, elige tu plan. Tu cesta no se pierde."
+                />
+              ) : (
+                ctx.toConfirm && (
+                  <ConfirmOrder
+                    key={ctx.toConfirm.day.id}
+                    dayId={ctx.toConfirm.day.id}
+                    confirmed={ctx.toConfirm.confirmed}
+                    dayLabel={formatDay(ctx.toConfirm.day.date)}
+                    cutoffLabel={formatCutoff(ctx.toConfirm.day.cutoff_at)}
+                    note={feeCents > 0 ? `Se suman ${formatEuros(feeCents)} de envío.` : undefined}
+                    autoConfirm={confirmar === "1"}
+                  />
+                )
               )}
             </div>
 
-            <details className="card-surface group p-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-                <span className="flex items-center gap-2">
-                  <Icon name="bookmark" className="size-5 text-primary" /> Guardar esta cesta
-                </span>
-                <Icon name="down" className="size-4 transition-transform group-open:rotate-180" />
-              </summary>
-              <p className="mb-3 mt-2 text-sm text-muted">
-                Para volver a usarla otro día (por ejemplo, «Cesta de verano»). La tendrás en Listas y cestas.
-              </p>
-              <ActionForm action={saveBasket}>
-                <input type="hidden" name="slot" value={ctx.slot} />
-                <Input name="name" placeholder="Nombre de la cesta" aria-label="Nombre de la cesta" maxLength={60} required />
-                <SubmitButton variant="outline" className="w-full" pendingText="Guardando…">
-                  Guardar
-                </SubmitButton>
-              </ActionForm>
-            </details>
+            {!ctx.isGuest && (
+              <details className="card-surface group p-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
+                  <span className="flex items-center gap-2">
+                    <Icon name="bookmark" className="size-5 text-primary" /> Guardar esta cesta
+                  </span>
+                  <Icon name="down" className="size-4 transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="mb-3 mt-2 text-sm text-muted">
+                  Para volver a usarla otro día (por ejemplo, «Cesta de verano»). La tendrás en Listas y cestas.
+                </p>
+                <ActionForm action={saveBasket}>
+                  <input type="hidden" name="slot" value={ctx.slot} />
+                  <Input
+                    name="name"
+                    placeholder="Nombre de la cesta"
+                    aria-label="Nombre de la cesta"
+                    maxLength={60}
+                    required
+                  />
+                  <SubmitButton variant="outline" className="w-full" pendingText="Guardando…">
+                    Guardar
+                  </SubmitButton>
+                </ActionForm>
+              </details>
+            )}
           </aside>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Sin cuenta o sin plan: «Confirmar pedido» lleva a crear la cuenta o a elegir el plan */
+function ConfirmWithAccount({ href, text, login }: { href: string; text: string; login?: string }) {
+  return (
+    <div id="confirmar" className="mt-3 scroll-mt-20 space-y-2">
+      <ButtonLink href={href} className="w-full">
+        <Icon name="check" className="size-5" /> Confirmar pedido
+      </ButtonLink>
+      <p className="text-center text-sm text-muted">{text}</p>
+      {login && (
+        <p className="text-center text-sm">
+          ¿Ya tienes cuenta?{" "}
+          <Link href={login} className="font-semibold text-primary underline underline-offset-2">
+            Entra
+          </Link>
+        </p>
       )}
     </div>
   );

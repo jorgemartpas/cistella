@@ -3,6 +3,10 @@ export type Faq = { q: string; a: string };
 /** Preguntas de la portada pública */
 export const PUBLIC_FAQS: Faq[] = [
   {
+    q: "¿Puedo mirar antes de suscribirme?",
+    a: "Sí. Entra en la tienda y llena tu cesta sin crear cuenta ni pagar nada. Cuando vayas a confirmar tu primer pedido, creas tu cuenta y eliges tu plan.",
+  },
+  {
     q: "¿Cuánto cuesta?",
     a: "Depende del plan que elijas (mira «Planes»), con IVA incluido. Los productos se pagan aparte, en cada reparto y con el peso real, a la misma tarjeta.",
   },
@@ -46,5 +50,5 @@ export const CUSTOMER_FAQS: Faq[] = [
     q: "¿Y si no estoy en casa?",
     a: "Si no te encontramos, ese pedido no se cobra. Escríbenos y buscamos una solución.",
   },
-  ...PUBLIC_FAQS.slice(1),
+  ...PUBLIC_FAQS.slice(2),
 ];

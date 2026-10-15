@@ -41,8 +41,10 @@ function Steps({ current }: { current: 1 | 2 | 3 }) {
 
 async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchParams">) {
   const profile = await requireRole("cliente");
-  const { pago, session_id: sessionId } = await searchParams;
+  const { pago, session_id: sessionId, confirmar } = await searchParams;
   if (pago === "ok" && typeof sessionId === "string") await syncCheckoutSession(sessionId, profile.id);
+  // Viene de «Confirmar pedido» en la cesta: al tener plan, vuelve allí y el pedido queda confirmado
+  const confirming = confirmar === "1";
 
   const supabase = await createClient();
   const [{ data: sub }, rules, { data: settings }] = await Promise.all([
@@ -52,6 +54,7 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
   ]);
   const isSubscribed = sub && ["activa", "pausada", "impagada"].includes(sub.status);
 
+  if (isSubscribed && confirming) redirect("/cesta?confirmar=1");
   if (isSubscribed && pago === "ok") {
     const perDelivery = sub.frequency === "por_envio";
     const next = sub.status === "activa" && !perDelivery ? await nextDeliveryFor(supabase, sub, new Date()) : null;
@@ -85,7 +88,7 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
     return (
       <Notice tone="info" title="Estamos confirmando tu pago">
         Tarda unos segundos.{" "}
-        <Link href="/bienvenida?pago=ok" className="font-semibold underline">
+        <Link href={confirming ? "/bienvenida?pago=ok&confirmar=1" : "/bienvenida?pago=ok"} className="font-semibold underline">
           Actualiza la página
         </Link>
         .
@@ -100,7 +103,7 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
         <h1 className="text-2xl font-bold">¿Dónde te llevamos la compra?</h1>
         <p className="mb-5 mt-1 text-muted">Solo usamos estos datos para tus pedidos.</p>
         <ActionForm action={updateProfile}>
-          <input type="hidden" name="next" value="/bienvenida" />
+          <input type="hidden" name="next" value={confirming ? "/bienvenida?confirmar=1" : "/bienvenida"} />
           <ProfileFields profile={profile} />
           <SubmitButton className="w-full">Continuar</SubmitButton>
         </ActionForm>
@@ -113,13 +116,18 @@ async function Welcome({ searchParams }: Pick<PageProps<"/bienvenida">, "searchP
     <>
       <Steps current={2} />
       <h1 className="text-2xl font-bold">Elige tu plan</h1>
-      <p className="mb-5 mt-1 text-muted">Lo puedes cambiar cuando quieras desde tu cuenta.</p>
+      <p className="mb-5 mt-1 text-muted">
+        {confirming
+          ? "Último paso para confirmar tu pedido. Lo puedes cambiar cuando quieras desde tu cuenta."
+          : "Lo puedes cambiar cuando quieras desde tu cuenta."}
+      </p>
       {pago === "cancelado" && (
         <div className="mb-4">
           <Notice tone="warning">No se ha completado el pago. Puedes intentarlo de nuevo.</Notice>
         </div>
       )}
       <ActionForm action={startSubscription}>
+        {confirming && <input type="hidden" name="confirmar" value="1" />}
         {settings && <PlanPicker rules={rules} prices={settings} plan={sub?.frequency} weekday={sub?.delivery_weekday} />}
         {demo && <Notice tone="warning">Modo demo: no se cobrará nada (Stripe no está configurado).</Notice>}
         <SubmitButton className="w-full" pendingText="Abriendo el pago…">

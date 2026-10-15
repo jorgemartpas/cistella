@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { confirmDelivery } from "@/lib/actions/basket";
 import { Icon } from "./icons";
 import { buttonStyles, cx } from "./ui";
@@ -12,6 +12,7 @@ export function ConfirmOrder({
   dayLabel,
   cutoffLabel,
   note,
+  autoConfirm = false,
 }: {
   dayId: string;
   confirmed: boolean;
@@ -21,10 +22,22 @@ export function ConfirmOrder({
   cutoffLabel: string;
   /** Texto extra bajo el botón (los gastos de envío, en pago por envío) */
   note?: string;
+  /** Lo confirma solo al abrirse (al volver del alta, si se pulsó «Confirmar pedido» sin cuenta) */
+  autoConfirm?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [optimistic, setOptimistic] = useOptimistic(confirmed);
   const [error, setError] = useState<string | null>(null);
+
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoConfirm || confirmed || autoStarted.current) return;
+    autoStarted.current = true;
+    startTransition(async () => {
+      const result = await confirmDelivery(dayId, true);
+      if (result.error) setError(result.error);
+    });
+  }, [autoConfirm, confirmed, dayId]);
 
   const toggle = () => {
     setError(null);

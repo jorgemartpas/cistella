@@ -45,7 +45,8 @@ const shops = [
 ];
 
 
-export default function Landing() {
+/** Página informativa: qué es Cistella, cómo funciona, planes y preguntas frecuentes. */
+export function Landing() {
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
@@ -68,8 +69,8 @@ export default function Landing() {
             vez, confirma cada pedido con un toque y te lo llevamos a casa.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="/registro" className="sm:px-8">
-              Empezar
+            <ButtonLink href="/" className="sm:px-8">
+              Ver la tienda
             </ButtonLink>
             <ButtonLink href="#planes" variant="secondary">
               Ver planes y precios
@@ -134,8 +135,8 @@ export default function Landing() {
               ))}
             </dl>
             <div className="mt-8 text-center">
-              <ButtonLink href="/registro" className="px-8">
-                Empezar
+              <ButtonLink href="/" className="px-8">
+                Ir a la tienda
               </ButtonLink>
             </div>
           </div>

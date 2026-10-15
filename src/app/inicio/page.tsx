@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PageSkeleton } from "@/components/ui";
 import { getCurrentProfile, HOME_BY_ROLE } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
 
 // Punto de entrada tras iniciar sesión: manda a cada uno a su zona.
 export default function InicioPage() {
@@ -18,14 +17,6 @@ export default function InicioPage() {
 async function RedirectByRole(): Promise<null> {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/entrar");
-  if (profile.role === "cliente") {
-    const supabase = await createClient();
-    const { data: sub } = await supabase
-      .from("subscriptions")
-      .select("status")
-      .eq("customer_id", profile.id)
-      .maybeSingle();
-    if (!sub || sub.status === "incompleta" || sub.status === "cancelada") redirect("/bienvenida");
-  }
+  // El cliente va a la tienda aunque aún no tenga plan: lo elige al confirmar su primer pedido
   redirect(HOME_BY_ROLE[profile.role]);
 }

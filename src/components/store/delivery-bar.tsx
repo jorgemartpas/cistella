@@ -12,12 +12,20 @@ import { BasketDayPicker } from "./basket-day-picker";
 export async function DeliveryBar() {
   const ctx = await getClientContext();
   const { sub, next, toConfirm, closing, perDelivery } = ctx;
-  const address = ctx.profile.address?.trim();
+  const address = ctx.profile?.address?.trim();
   const where = address ? ` en ${address}` : "";
 
   let content: ReactNode;
   let tone: "normal" | "warning" | "danger" = "normal";
-  if (!sub || sub.status === "incompleta" || sub.status === "cancelada") {
+  if (ctx.isGuest) {
+    content = (
+      <>
+        Te llevamos a casa la compra de las tiendas de Alzira (CP 46600), los martes y viernes. Llena tu cesta sin
+        compromiso: la cuenta y el plan se piden al confirmar el pedido.{" "}
+        <BarLink href="/como-funciona">Cómo funciona y precios</BarLink>
+      </>
+    );
+  } else if (!sub || sub.status === "incompleta" || sub.status === "cancelada") {
     content = (
       <>
         Elige tu plan para recibir tu cesta{where}.{" "}

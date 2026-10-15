@@ -85,8 +85,17 @@ function demoPeriodEnd(plan: DeliveryFrequency) {
   return hasMonthlyFee(plan) ? new Date(Date.now() + 30 * 86_400_000).toISOString() : null;
 }
 
-/** Abre el Checkout de Stripe: suscripción con cuota, o solo guardar la tarjeta (pago por envío). */
-async function checkoutUrl(customerId: string, stripeCustomerId: string, chosen: ChosenPlan, returnPath: string) {
+/**
+ * Abre el Checkout de Stripe: suscripción con cuota, o solo guardar la tarjeta (pago por envío).
+ * Con `confirming`, al volver se confirma el pedido que el cliente quería confirmar.
+ */
+async function checkoutUrl(
+  customerId: string,
+  stripeCustomerId: string,
+  chosen: ChosenPlan,
+  returnPath: string,
+  confirming = false,
+) {
   const stripe = getStripe()!;
   const metadata: PlanMetadata = {
     user_id: customerId,
@@ -99,8 +108,8 @@ async function checkoutUrl(customerId: string, stripeCustomerId: string, chosen:
     client_reference_id: customerId,
     locale: "es" as const,
     metadata,
-    success_url: `${env.siteUrl}${returnPath}?pago=ok&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${env.siteUrl}${returnPath}?pago=cancelado`,
+    success_url: `${env.siteUrl}${returnPath}?pago=ok${confirming ? "&confirmar=1" : ""}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${env.siteUrl}${returnPath}?pago=cancelado${confirming ? "&confirmar=1" : ""}`,
   };
   if (chosen.plan === "por_envio") {
     const session = await stripe.checkout.sessions.create({ ...common, mode: "setup", currency: "eur" });
@@ -124,6 +133,7 @@ export async function startSubscription(_: ActionState, formData: FormData): Pro
   if (!isProfileComplete(profile)) return { error: "Antes completa tus datos de entrega." };
   const chosen = await choosePlan(formData);
   if ("error" in chosen) return chosen;
+  const confirming = formData.get("confirmar") === "1";
 
   const existing = await currentSubscription(profile.id);
   if (existing && ["activa", "pausada", "impagada"].includes(existing.status)) {
@@ -147,7 +157,7 @@ export async function startSubscription(_: ActionState, formData: FormData): Pro
     );
     if (error) return { error: "No se ha podido activar el plan." };
     await prepareBaskets(profile.id, existing?.frequency ?? null, chosen.plan);
-    redirect("/bienvenida?pago=ok");
+    redirect(confirming ? "/cesta?confirmar=1" : "/bienvenida?pago=ok");
   }
 
   let stripeCustomerId = existing?.stripe_customer_id ?? null;
@@ -166,7 +176,7 @@ export async function startSubscription(_: ActionState, formData: FormData): Pro
   if (error) return { error: "No se ha podido preparar el plan." };
   await prepareBaskets(profile.id, existing?.frequency ?? null, chosen.plan);
 
-  const url = await checkoutUrl(profile.id, stripeCustomerId, chosen, "/bienvenida");
+  const url = await checkoutUrl(profile.id, stripeCustomerId, chosen, "/bienvenida", confirming);
   if (!url) return { error: "No se ha podido abrir el pago. Inténtalo de nuevo." };
   redirect(url);
 }

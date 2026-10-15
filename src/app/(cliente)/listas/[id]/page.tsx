@@ -8,7 +8,7 @@ import { ApplyListButton } from "@/components/store/apply-list-button";
 import { ProductGrid } from "@/components/store/product-grid";
 import { EmptyState, Input, PageSkeleton } from "@/components/ui";
 import { deleteList, renameList } from "@/lib/actions/lists";
-import { getClientContext } from "@/lib/client-context";
+import { getCustomerContext } from "@/lib/client-context";
 import { formatEuros, formatQuantity, lineTotalCents } from "@/lib/domain/money";
 import { WEEKDAY_NAMES } from "@/lib/domain/schedule";
 import { plural } from "@/lib/format";
@@ -29,7 +29,7 @@ export default function ListPage({ params }: PageProps<"/listas/[id]">) {
 
 async function ListDetail({ params }: Pick<PageProps<"/listas/[id]">, "params">) {
   const { id } = await params;
-  const ctx = await getClientContext();
+  const ctx = await getCustomerContext();
   const supabase = await createClient();
   const [{ data: list }, { data: items }] = await Promise.all([
     supabase.from("saved_lists").select("*").eq("id", id).maybeSingle<SavedList>(),

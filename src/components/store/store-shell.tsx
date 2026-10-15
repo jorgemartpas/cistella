@@ -89,11 +89,38 @@ export function StoreShell({ children }: { children: ReactNode }) {
 
 async function HeaderAccount() {
   const ctx = await getClientContext();
-  const firstName = ctx.profile.full_name?.trim().split(/\s+/)[0] || "de nuevo";
   return (
     <>
-      <UserMenu firstName={firstName} />
+      {ctx.profile ? (
+        <UserMenu firstName={ctx.profile.full_name?.trim().split(/\s+/)[0] || "de nuevo"} />
+      ) : (
+        <GuestLinks />
+      )}
       <BasketButton count={ctx.basketCount} totalCents={ctx.basketTotalCents} />
+    </>
+  );
+}
+
+/** Visitante sin cuenta: cómo funciona y entrar (la cuenta se crea al confirmar el pedido) */
+function GuestLinks() {
+  return (
+    <>
+      <Link href="/como-funciona" className="hidden text-[15px] font-bold text-muted hover:text-text lg:inline">
+        Cómo funciona
+      </Link>
+      <Link
+        href="/entrar"
+        className="hidden rounded-full border border-primary px-4 py-2 text-[15px] font-bold text-primary hover:bg-primary-soft md:inline-flex"
+      >
+        Entrar
+      </Link>
+      <Link
+        href="/entrar"
+        aria-label="Entrar"
+        className="flex size-10 items-center justify-center rounded-full text-muted hover:bg-surface-2 md:hidden"
+      >
+        <Icon name="user" className="size-6" />
+      </Link>
     </>
   );
 }

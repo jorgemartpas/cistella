@@ -20,14 +20,16 @@ export async function ProductGrid({ products }: { products: Product[] }) {
               className="aspect-square w-full rounded-2xl"
               iconClassName="text-6xl sm:text-7xl"
             />
-            <div className="absolute right-2 top-2">
-              <SaveToList
-                productId={product.id}
-                productName={product.name}
-                lists={membership.lists}
-                memberOf={membership.byProduct.get(product.id) ?? []}
-              />
-            </div>
+            {!ctx.isGuest && (
+              <div className="absolute right-2 top-2">
+                <SaveToList
+                  productId={product.id}
+                  productName={product.name}
+                  lists={membership.lists}
+                  memberOf={membership.byProduct.get(product.id) ?? []}
+                />
+              </div>
+            )}
           </div>
           <p className="mt-2.5 line-clamp-2 px-0.5 text-[15px] font-semibold leading-snug">{product.name}</p>
           <p className="mt-0.5 line-clamp-1 px-0.5 text-xs text-muted">

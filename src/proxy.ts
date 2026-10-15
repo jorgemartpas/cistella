@@ -3,13 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabasePublicConfig } from "@/lib/supabase/config";
 
 // Rutas que exigen sesión. El rol concreto se comprueba en cada página (src/lib/auth.ts).
+// La tienda (portada, categorías, buscador y cesta) se ve sin cuenta: se pide al confirmar el pedido.
 const PROTECTED = [
   "/inicio",
-  "/portada",
   "/bienvenida",
-  "/cesta",
-  "/categorias",
-  "/buscar",
   "/listas",
   "/pedidos",
   "/cuenta",
@@ -53,10 +50,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // La portada de un cliente con sesión es su tienda (la URL sigue siendo "/")
-  if (isLoggedIn && path === "/") {
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", data!.claims.sub).maybeSingle();
-    if (profile?.role === "cliente") {
+  // La portada es la tienda (la URL sigue siendo "/"), para visitantes y clientes; las tiendas y
+  // el equipo ven la página informativa
+  if (path === "/") {
+    let showStore = !isLoggedIn;
+    if (isLoggedIn) {
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", data!.claims.sub).maybeSingle();
+      showStore = profile?.role === "cliente";
+    }
+    if (showStore) {
       const rewrite = NextResponse.rewrite(new URL("/portada", request.url), { request });
       for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
       return rewrite;

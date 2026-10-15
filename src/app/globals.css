@@ -1,23 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  /* Estilo de tienda online: fondo blanco, grises claros, verde Cistella y botón de cesta ámbar */
-  --bg: #ffffff;
+  /* Estilo «Fresco»: fondo gris claro, tarjetas blancas con sombra, verde vivo y esquinas redondeadas */
+  --bg: #f4f6f5;
   --surface: #ffffff;
-  --surface-2: #f5f5f4;
-  --text: #292929;
-  --muted: #6e6e6e;
-  --border: #e3e3e3;
-  --primary: #18874a;
-  --primary-hover: #136f3c;
+  --surface-2: #edf2ef;
+  --text: #13201a;
+  --muted: #5b6a62;
+  --border: #e0e7e2;
+  --primary: #12843f;
+  --primary-hover: #0e6c33;
   --primary-ink: #ffffff;
-  --primary-soft: #e8f5ec;
+  --primary-soft: #dcf5e4;
   --accent: #d9691c;
   --accent-soft: #fdebd9;
-  --cart: #ffc93c;
-  --cart-hover: #f5b919;
-  --cart-ink: #3b2a00;
-  --cart-badge: #5a3b06;
+  --cart: #12843f;
+  --cart-hover: #0e6c33;
+  --cart-ink: #ffffff;
+  --cart-badge: #ffffff;
+  --card-ring: transparent;
+  --card-shadow: 0 1px 2px rgb(16 40 28 / 0.05), 0 14px 30px -20px rgb(16 40 28 / 0.35);
   --danger: #b42318;
   --danger-soft: #fdecea;
   --warning: #9a5a07;
@@ -41,10 +43,12 @@
     --primary-soft: #1d3223;
     --accent: #f0a35e;
     --accent-soft: #3a2a1a;
-    --cart: #f0b73a;
-    --cart-hover: #f5c65a;
-    --cart-ink: #241a00;
-    --cart-badge: #4a3104;
+    --cart: #74c285;
+    --cart-hover: #8fd29e;
+    --cart-ink: #0c1a10;
+    --cart-badge: #0c1a10;
+    --card-ring: #2f372f;
+    --card-shadow: 0 10px 30px -20px rgb(0 0 0 / 0.8);
     --danger: #f2877d;
     --danger-soft: #3a1d1a;
     --warning: #f1c26b;
@@ -78,7 +82,19 @@
   --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
-  --font-sans: "Open Sans Variable", "Open Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Esquinas grandes en tarjetas, botones y campos */
+@theme {
+  --radius-lg: 1.125rem;
+}
+
+/* Tarjeta blanca flotando con sombra (en modo oscuro, con un borde suave) */
+@utility card-surface {
+  background-color: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--card-ring), var(--card-shadow);
 }
 
 html {

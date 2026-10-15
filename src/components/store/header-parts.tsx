@@ -20,7 +20,7 @@ export function StoreNav() {
 
 export function StoreNavLinks({ pathname }: { pathname: string | null }) {
   return (
-    <nav aria-label="Secciones de la tienda" className="hidden h-full items-stretch gap-6 md:flex">
+    <nav aria-label="Secciones de la tienda" className="hidden items-center gap-1 md:flex">
       {SECTIONS.map((s) => {
         const active = pathname !== null && (pathname === s.href || pathname.startsWith(`${s.href}/`));
         return (
@@ -29,10 +29,8 @@ export function StoreNavLinks({ pathname }: { pathname: string | null }) {
             href={s.href}
             aria-current={active ? "page" : undefined}
             className={cx(
-              "relative flex items-center whitespace-nowrap text-[15px] font-semibold",
-              active ? "text-text" : "text-muted hover:text-text",
-              active &&
-                "after:absolute after:inset-x-0 after:bottom-0 after:h-1 after:rounded-t-full after:bg-primary",
+              "flex items-center whitespace-nowrap rounded-full px-4 py-2.5 text-[15px] font-bold",
+              active ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-text",
             )}
           >
             {s.label}
@@ -87,7 +85,7 @@ export function UserMenu({ firstName, items = CUSTOMER_MENU }: { firstName: stri
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-12 z-40 w-64 overflow-hidden rounded-lg border border-border bg-surface py-2 shadow-lg"
+          className="card-surface absolute right-0 top-12 z-40 w-64 overflow-hidden py-2"
         >
           {items.map((item) => (
             <Link

@@ -57,12 +57,13 @@ export async function DeliveryBar() {
         Próximo reparto el <strong>{formatDay(next.date)}</strong>
         {where}.{" "}
         {toConfirm?.confirmed ? (
-          <span className="inline-flex items-center gap-1 font-semibold text-primary">
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-0.5 text-sm font-bold text-primary">
             <Icon name="check" className="size-4" /> Confirmado
           </span>
         ) : (
           <>
-            <span className="font-semibold text-warning">Sin confirmar</span> (hasta el {formatCutoff(next.cutoffAt)}
+            <span className="rounded-full bg-surface px-2.5 py-0.5 text-sm font-bold text-warning">Sin confirmar</span> (hasta
+            el {formatCutoff(next.cutoffAt)}
             ). <BarLink href="/cesta#confirmar">Confirmar</BarLink>
           </>
         )}
@@ -76,16 +77,18 @@ export async function DeliveryBar() {
     <div className="mb-6 space-y-2">
       <div
         className={cx(
-          "flex items-start gap-3 rounded-lg px-4 py-3 text-[15px]",
-          tone === "normal" && "bg-surface-2 text-text",
+          "flex items-start gap-3 rounded-lg px-4 py-3.5 text-[15px] leading-relaxed",
+          tone === "normal" && "bg-primary text-primary-ink shadow-[0_12px_26px_-16px_rgb(18_132_63/0.8)]",
           tone === "warning" && "bg-warning-soft text-warning",
           tone === "danger" && "bg-danger-soft text-danger",
         )}
       >
-        <Icon name="home" className="mt-0.5 size-5 shrink-0 text-primary" />
+        <Icon name="home" className="mt-0.5 size-5 shrink-0" />
         <p>
           {closing && (
-            <span className="mr-1 font-semibold text-warning">Estamos preparando el reparto del {formatDay(closing.date)}.</span>
+            <span className="mr-1 rounded-full bg-surface px-2.5 py-0.5 text-sm font-bold text-warning">
+              Estamos preparando el reparto del {formatDay(closing.date)}
+            </span>
           )}
           {content}
         </p>
@@ -102,7 +105,7 @@ export async function DeliveryBar() {
 
 function BarLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-semibold text-primary underline-offset-2 hover:underline">
+    <Link href={href} className="font-bold underline underline-offset-2 hover:no-underline">
       {children}
     </Link>
   );

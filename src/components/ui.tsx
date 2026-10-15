@@ -26,14 +26,14 @@ export function ButtonLink({
 }
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cx("rounded-lg border border-border bg-surface p-4", className)} {...props} />;
+  return <div className={cx("card-surface p-4", className)} {...props} />;
 }
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-5 flex items-start justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
         {subtitle && <p className="mt-1 text-muted">{subtitle}</p>}
       </div>
       {action}
@@ -44,7 +44,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 mt-6 flex items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold">{children}</h2>
+      <h2 className="text-lg font-extrabold tracking-tight">{children}</h2>
       {action}
     </div>
   );

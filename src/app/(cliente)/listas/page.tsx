@@ -82,7 +82,7 @@ async function SavedLists() {
             <li key={list.id}>
               <Link
                 href={`/listas/${list.id}`}
-                className="flex items-center gap-3 rounded-lg border border-border p-4 hover:bg-surface-2"
+                className="card-surface flex items-center gap-3 p-4 hover:ring-2 hover:ring-primary-soft"
               >
                 <span className="flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary">
                   <Icon name="bookmark" className="size-5" />
@@ -97,7 +97,7 @@ async function SavedLists() {
           ))}
         </ul>
       )}
-      <div className="mx-auto max-w-md rounded-lg border border-border p-4">
+      <div className="card-surface mx-auto max-w-md p-5">
         <h2 className="mb-3 font-bold">Nueva lista</h2>
         <ActionForm action={createListForm}>
           <Input name="name" placeholder="Nombre de la lista" aria-label="Nombre de la lista" maxLength={60} required />
@@ -139,7 +139,7 @@ async function SavedBaskets() {
         const items = basket.saved_list_items.filter((i) => i.products?.active);
         const total = items.reduce((sum, i) => sum + lineTotalCents(Number(i.quantity ?? 1), i.products!.price_cents), 0);
         return (
-          <li key={basket.id} className="flex flex-col rounded-lg border border-border p-4">
+          <li key={basket.id} className="card-surface flex flex-col p-4">
             <Link href={`/listas/${basket.id}`} className="group flex items-start gap-3">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-cart text-xl" aria-hidden>
                 🧺

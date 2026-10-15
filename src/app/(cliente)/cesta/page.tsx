@@ -45,7 +45,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
   return (
     <div className="mx-auto max-w-5xl">
       <DeliveryBar />
-      <h1 className="text-2xl font-bold">{dayName ? `Mi cesta del ${dayName}` : "Mi cesta"}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">{dayName ? `Mi cesta del ${dayName}` : "Mi cesta"}</h1>
       <p className="mb-6 mt-0.5 text-sm text-muted">
         Se guarda sola. Antes de cada reparto, revísala y confirma el pedido.
       </p>
@@ -64,7 +64,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
       ) : (
         <div className="md:grid md:grid-cols-[1fr_20rem] md:items-start md:gap-8">
           <div>
-            <ul className="divide-y divide-border rounded-lg border border-border">
+            <ul className="card-surface divide-y divide-border">
               {inBasket.map((product) => {
                 const quantity = ctx.basket.get(product.id)!;
                 return (
@@ -111,7 +111,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
           </div>
 
           <aside className="mt-6 space-y-4 md:sticky md:top-24 md:mt-0">
-            <div className="rounded-lg border border-border p-4">
+            <div className="card-surface p-5">
               <h2 className="mb-3 text-lg font-bold">Resumen</h2>
               <dl className="space-y-1.5 text-[15px]">
                 <div className="flex justify-between">
@@ -150,7 +150,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
               )}
             </div>
 
-            <details className="group rounded-lg border border-border p-4">
+            <details className="card-surface group p-5">
               <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
                 <span className="flex items-center gap-2">
                   <Icon name="bookmark" className="size-5 text-primary" /> Guardar esta cesta
@@ -178,7 +178,7 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
 /** Pago por envío: elegir qué repartos se quieren */
 function RequestDays({ days, feeCents }: { days: RequestableDay[]; feeCents: number }) {
   return (
-    <section className="mb-6 rounded-lg border border-border p-4">
+    <section className="card-surface mb-6 p-5">
       <h2 className="font-bold">¿Qué días quieres tu cesta?</h2>
       <p className="mt-0.5 text-sm text-muted">
         Pago por envío: {formatEuros(feeCents)} cada reparto. Pide o anula hasta la hora de cierre de cada uno.

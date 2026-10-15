@@ -51,15 +51,15 @@ async function Category({ params }: Pick<PageProps<"/categorias/[categoria]">, "
                 href={`/categorias/${c}`}
                 aria-current={c === category ? "page" : undefined}
                 className={cx(
-                  "flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-[15px] md:rounded-lg md:px-3 md:py-2.5",
+                  "flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2.5 text-[15px] font-semibold md:px-4",
                   c === category
-                    ? "bg-primary-soft font-bold text-primary"
-                    : "border border-border md:border-transparent md:hover:bg-surface-2",
+                    ? "bg-primary font-bold text-primary-ink shadow-[0_10px_22px_-12px_rgb(18_132_63/0.8)]"
+                    : "bg-surface shadow-sm md:bg-transparent md:shadow-none md:hover:bg-surface",
                 )}
               >
                 <span aria-hidden>{CATEGORY_META[c].icon}</span>
                 {CATEGORY_META[c].title}
-                <span className="ml-auto hidden text-sm font-normal text-muted md:inline">{count(c)}</span>
+                <span className="ml-auto hidden text-sm font-normal opacity-70 md:inline">{count(c)}</span>
               </Link>
             </li>
           ))}
@@ -68,7 +68,7 @@ async function Category({ params }: Pick<PageProps<"/categorias/[categoria]">, "
 
       <div className="min-w-0">
         <DeliveryBar />
-        <h1 className="text-2xl font-bold">{meta.title}</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">{meta.title}</h1>
         <p className="mb-6 mt-0.5 text-sm text-muted">{meta.subtitle}</p>
         {products.length === 0 ? (
           <EmptyState icon={meta.icon} title={`Ahora mismo no hay ${meta.title.toLowerCase()} a la venta`} />

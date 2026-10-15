@@ -26,8 +26,8 @@ export function SideNavItems({ items, pathname }: { items: NavItem[]; pathname: 
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cx(
-                  "flex items-center gap-3 rounded-lg px-3 py-3 text-[15px]",
-                  active ? "bg-surface font-semibold text-primary" : "text-text hover:text-primary",
+                  "flex items-center gap-3 rounded-full px-4 py-3 text-[15px] font-semibold",
+                  active ? "bg-surface text-primary shadow-sm" : "text-text hover:text-primary",
                 )}
               >
                 <Icon name={item.icon} className="size-5" />
@@ -40,7 +40,7 @@ export function SideNavItems({ items, pathname }: { items: NavItem[]; pathname: 
           <form action={signOut}>
             <button
               type="submit"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-[15px] hover:text-primary"
+              className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[15px] font-semibold hover:text-primary"
             >
               <Icon name="logout" className="size-5" />
               Cerrar sesión

@@ -53,7 +53,7 @@ async function ListDetail({ params }: Pick<PageProps<"/listas/[id]">, "params">)
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-primary">{isBasket ? "Cesta guardada" : "Lista"}</p>
-          <h1 className="text-2xl font-bold">{list.name}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">{list.name}</h1>
           <p className="text-sm text-muted">
             {plural(lines.length, "producto")}
             {isBasket && ` · ${formatEuros(total)} aprox.`}
@@ -75,7 +75,7 @@ async function ListDetail({ params }: Pick<PageProps<"/listas/[id]">, "params">)
           Añade productos con el marcador de su foto, desde Categorías o el buscador.
         </EmptyState>
       ) : isBasket ? (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="card-surface divide-y divide-border">
           {lines.map(({ product, quantity }) => (
             <li key={product.id} className="flex items-center gap-4 p-3 sm:p-4">
               <ProductImage product={product} neutral className="size-14" iconClassName="text-3xl" />

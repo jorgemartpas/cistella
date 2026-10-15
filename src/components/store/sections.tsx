@@ -21,16 +21,16 @@ export function StoreSection({
   className?: string;
 }) {
   return (
-    <section className={cx("border-t border-border py-7 first:border-t-0 first:pt-0", className)}>
+    <section className={cx("py-6 first:pt-0", className)}>
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold">{title}</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight">{title}</h2>
           {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
         </div>
         {href && (
           <Link
             href={href}
-            className="flex shrink-0 items-center gap-1 text-[15px] font-semibold text-primary hover:underline"
+            className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-primary hover:underline"
           >
             {linkText ?? "Ver todo"} <Icon name="chevron" className="size-4" />
           </Link>
@@ -46,7 +46,7 @@ export function SeasonHero({ highlight, href }: { highlight: SeasonHighlight; hr
   const [from, to] = highlight.colors;
   return (
     <div
-      className="relative flex min-h-56 overflow-hidden rounded-lg sm:min-h-64"
+      className="relative flex min-h-56 overflow-hidden rounded-[1.75rem] shadow-[0_18px_40px_-24px_rgb(60_30_10/0.7)] sm:min-h-64"
       style={{ background: `linear-gradient(120deg, ${from} 0%, ${to} 100%)` }}
     >
       <div className="relative z-10 flex max-w-md flex-col justify-center gap-4 p-6 sm:p-10">

@@ -20,7 +20,7 @@ const MOBILE_NAV: NavItem[] = [
 export function StoreShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-surface pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-30 bg-surface/95 pt-[env(safe-area-inset-top)] shadow-[0_8px_30px_-18px_rgb(16_40_28/0.3)] backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 md:h-[72px] md:gap-8">
           <Link href="/" aria-label="Cistella, inicio" className="flex shrink-0 items-center gap-2">
             <LogoMark className="size-10 md:size-11" />
@@ -33,7 +33,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
               type="search"
               placeholder="Buscar productos"
               aria-label="Buscar productos"
-              className="h-11 w-full rounded-full border border-border bg-surface-2 pl-11 pr-4 text-[15px] placeholder:text-muted focus:border-primary focus:bg-surface"
+              className="h-12 w-full rounded-full border border-transparent bg-surface-2 pl-11 pr-4 text-[15px] placeholder:text-muted focus:border-primary focus:bg-surface"
             />
           </Form>
           <Suspense fallback={<StoreNavLinks pathname={null} />}>
@@ -54,7 +54,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="pb-nav mx-auto w-full max-w-6xl flex-1 px-4 pt-5 md:pb-10 md:pt-6">{children}</main>
+      <main className="pb-nav mx-auto w-full max-w-6xl flex-1 px-4 pt-5 md:pb-10 md:pt-7">{children}</main>
 
       <footer className="mx-auto hidden w-full max-w-6xl border-t border-border px-4 py-6 text-sm text-muted md:flex md:justify-between">
         <p>© Cistella · Alzira</p>
@@ -77,7 +77,7 @@ export function StoreShell({ children }: { children: ReactNode }) {
 
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_-20px_rgb(16_40_28/0.4)] md:hidden"
       >
         <Suspense fallback={<NavList nav={MOBILE_NAV} pathname={null} />}>
           <ActiveNavList nav={MOBILE_NAV} />
@@ -104,10 +104,10 @@ function BasketButton({ count, totalCents }: { count: number | null; totalCents:
     <Link
       href="/cesta"
       aria-label={count === null ? "Mi cesta" : `Mi cesta: ${count} productos, ${formatEuros(totalCents ?? 0)}`}
-      className="flex h-11 items-center gap-2 rounded-lg bg-cart px-3 font-semibold text-cart-ink shadow-sm hover:bg-cart-hover"
+      className="flex h-11 items-center gap-2 rounded-full bg-cart px-4 font-bold text-cart-ink shadow-[0_10px_22px_-10px_rgb(18_132_63/0.7)] hover:bg-cart-hover"
     >
       <Icon name="cart" className="size-5" />
-      <span className="flex size-6 items-center justify-center rounded-full bg-cart-badge text-xs font-bold text-white tabular-nums">
+      <span className="flex size-6 items-center justify-center rounded-full bg-cart-badge text-xs font-bold text-cart tabular-nums">
         {count ?? "·"}
       </span>
       <span className="text-sm tabular-nums">{totalCents === null ? "" : formatEuros(totalCents)}</span>

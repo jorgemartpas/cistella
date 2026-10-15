@@ -12,12 +12,12 @@ export async function ProductGrid({ products }: { products: Product[] }) {
   return (
     <ul className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">
       {products.map((product) => (
-        <li key={product.id} className="flex flex-col">
+        <li key={product.id} className="card-surface flex flex-col rounded-[1.375rem] p-2.5 pb-3.5">
           <div className="relative">
             <ProductImage
               product={product}
               neutral
-              className="aspect-square w-full"
+              className="aspect-square w-full rounded-2xl"
               iconClassName="text-6xl sm:text-7xl"
             />
             <div className="absolute right-2 top-2">
@@ -29,13 +29,13 @@ export async function ProductGrid({ products }: { products: Product[] }) {
               />
             </div>
           </div>
-          <p className="mt-2 line-clamp-2 text-[15px] leading-snug">{product.name}</p>
-          <p className="mt-0.5 line-clamp-1 text-xs text-muted">
+          <p className="mt-2.5 line-clamp-2 px-0.5 text-[15px] font-semibold leading-snug">{product.name}</p>
+          <p className="mt-0.5 line-clamp-1 px-0.5 text-xs text-muted">
             {product.shop_id ? shopName.get(product.shop_id) : (product.description ?? "")}
             {product.shop_id && product.description ? ` · ${product.description}` : ""}
           </p>
-          <p className="mt-1">
-            <span className="text-lg font-bold">{formatEuros(product.price_cents)}</span>{" "}
+          <p className="mt-1 px-0.5">
+            <span className="text-lg font-extrabold text-primary">{formatEuros(product.price_cents)}</span>{" "}
             <span className="text-sm text-muted">/{UNIT_LABELS[product.unit].short}</span>
           </p>
           {ctx.unavailable.has(product.id) && (

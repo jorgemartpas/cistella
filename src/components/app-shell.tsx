@@ -29,7 +29,7 @@ export function AppShell({
   const all = [...nav, ...more];
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-surface pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-30 bg-surface/95 pt-[env(safe-area-inset-top)] shadow-[0_8px_30px_-18px_rgb(16_40_28/0.3)] backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 md:h-[72px]">
           <Logo />
           {badge && (
@@ -56,7 +56,7 @@ export function AppShell({
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl flex-1">
-        <aside className="hidden w-60 shrink-0 bg-surface-2 px-4 py-8 md:block">
+        <aside className="hidden w-60 shrink-0 px-2 py-8 md:block">
           <Suspense fallback={<SideNavItems items={all} pathname={null} />}>
             <SideNav items={all} />
           </Suspense>
@@ -68,7 +68,7 @@ export function AppShell({
 
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_-20px_rgb(16_40_28/0.4)] md:hidden"
       >
         {/* La pestaña activa depende de la URL: se marca al hidratar */}
         <Suspense fallback={<NavList nav={nav} pathname={null} />}>

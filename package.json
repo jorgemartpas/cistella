@@ -16,7 +16,7 @@
     "sql:instalacion": "node scripts/sql-instalacion.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/open-sans": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.1",

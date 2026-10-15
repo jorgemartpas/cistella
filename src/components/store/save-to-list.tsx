@@ -66,7 +66,7 @@ export function SaveToList({
         <Icon name="bookmark" className={cx("size-4", saved && "fill-current")} />
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-20 w-60 rounded-lg border border-border bg-surface p-3 text-left shadow-lg">
+        <div className="card-surface absolute right-0 top-11 z-20 w-60 p-3 text-left">
           <p className="mb-2 text-sm font-bold">Guardar en una lista</p>
           {lists.length > 0 && (
             <ul className="mb-2 max-h-48 space-y-1 overflow-y-auto">

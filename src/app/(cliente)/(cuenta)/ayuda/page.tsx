@@ -8,7 +8,7 @@ export default function HelpPage() {
   return (
     <>
       <PageHeader title="Preguntas frecuentes" />
-      <div className="divide-y divide-border rounded-lg border border-border">
+      <div className="card-surface divide-y divide-border">
         {CUSTOMER_FAQS.map((faq) => (
           <details key={faq.q} className="group px-4 py-1">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 font-semibold">

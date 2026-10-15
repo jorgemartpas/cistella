@@ -54,7 +54,7 @@ async function Search({ searchParams }: Pick<PageProps<"/buscar">, "searchParams
         />
       </Form>
       {query && (
-        <h1 className="mb-6 text-2xl font-bold">
+        <h1 className="mb-6 text-3xl font-extrabold tracking-tight">
           {results.length > 0 ? `Resultados para «${query}»` : `No hemos encontrado «${query}»`}
         </h1>
       )}

@@ -107,19 +107,25 @@ export function QuantityStepper({
           onClick={() => change(unit === "kg" ? 0.5 : 1)}
           className={cx(
             "inline-flex min-h-10 items-center justify-center gap-1 rounded-full px-4 text-sm font-semibold",
-            card
-              ? "w-full border border-primary text-primary hover:bg-primary-soft"
-              : "bg-primary text-primary-ink",
+            card ? "w-full bg-primary font-bold text-primary-ink hover:bg-primary-hover" : "bg-primary text-primary-ink",
           )}
           aria-label={`Añadir ${productName}`}
         >
-          <Icon name="plus" className="size-4" /> {card ? "Añadir a la cesta" : "Añadir"}
+          <Icon name="plus" className="size-4" />
+          {card ? (
+            <>
+              <span className="sm:hidden">Añadir</span>
+              <span className="hidden sm:inline">Añadir a la cesta</span>
+            </>
+          ) : (
+            "Añadir"
+          )}
         </button>
       ) : (
         <div
           className={cx(
             "inline-flex items-center rounded-full border bg-surface",
-            card ? "w-full justify-between border-primary bg-primary-soft" : "border-border",
+            card ? "w-full justify-between border-transparent bg-primary-soft" : "border-border",
             pending && "opacity-80",
           )}
           role="group"

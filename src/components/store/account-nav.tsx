@@ -34,10 +34,10 @@ export function AccountNavItems({ pathname }: { pathname: string | null }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cx(
-                  "flex items-center gap-3 whitespace-nowrap rounded-full border px-4 py-2 text-[15px] md:rounded-lg md:border-0 md:px-3 md:py-3",
+                  "flex items-center gap-3 whitespace-nowrap rounded-full px-4 py-2.5 text-[15px] font-semibold md:py-3",
                   active
-                    ? "border-primary font-semibold text-primary md:bg-surface"
-                    : "border-border text-text hover:text-primary",
+                    ? "bg-primary text-primary-ink shadow-[0_10px_22px_-12px_rgb(18_132_63/0.8)] md:bg-surface md:text-primary md:shadow-sm"
+                    : "bg-surface shadow-sm hover:text-primary md:bg-transparent md:shadow-none",
                 )}
               >
                 <Icon name={item.icon} className="hidden size-5 md:block" />
@@ -50,7 +50,7 @@ export function AccountNavItems({ pathname }: { pathname: string | null }) {
           <form action={signOut}>
             <button
               type="submit"
-              className="flex items-center gap-3 whitespace-nowrap rounded-full border border-border px-4 py-2 text-[15px] hover:text-primary md:rounded-lg md:border-0 md:px-3 md:py-3"
+              className="flex items-center gap-3 whitespace-nowrap rounded-full bg-surface px-4 py-2.5 text-[15px] font-semibold shadow-sm hover:text-primary md:bg-transparent md:py-3 md:shadow-none"
             >
               <Icon name="logout" className="hidden size-5 md:block" />
               Cerrar sesión

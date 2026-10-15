@@ -71,7 +71,7 @@ async function ShopOrders({ searchParams }: Pick<PageProps<"/tienda">, "searchPa
 
       {nextOpen && (
         <Notice tone="info">
-          Próximo reparto en el que te toca: <strong>{formatDay(nextOpen.date)}</strong>. Los pedidos se cierran el{" "}
+          Próximo reparto: <strong>{formatDay(nextOpen.date)}</strong>. Los pedidos se cierran el{" "}
           {formatCutoff(nextOpen.cutoff_at)} y entonces aparecen aquí.
         </Notice>
       )}

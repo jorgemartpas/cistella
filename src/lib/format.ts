@@ -50,3 +50,8 @@ export function formatMonth(month: string): string {
 export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** "1 pedido", "3 pedidos" */
+export function plural(n: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${n} ${n === 1 ? singular : pluralForm}`;
+}

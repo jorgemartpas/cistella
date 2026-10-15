@@ -1,7 +1,9 @@
 // Crea usuarios de prueba: admin, una cuenta por tienda del piloto y dos clientes con cesta.
 // Uso: npm run seed:users   (lee .env.local; para un proyecto remoto añade --yes)
 import { createClient } from "@supabase/supabase-js";
-import { nextOpenDateForWeekday, type ScheduleRule } from "../src/lib/domain/schedule";
+import { isoWeekday } from "../src/lib/domain/dates";
+import { nextOpenDate, nextOpenDateForWeekday, type ScheduleRule } from "../src/lib/domain/schedule";
+import type { DeliveryFrequency } from "../src/lib/domain/subscription";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -27,37 +29,84 @@ const SHOP_ACCOUNTS = [
   { email: "fruteria-b@cistella.test", name: "Frutería B", shopId: "11111111-1111-4111-8111-000000000006" },
 ];
 
-const CUSTOMERS = [
+type SeedCustomer = {
+  email: string;
+  name: string;
+  phone: string;
+  address: string;
+  plan: DeliveryFrequency;
+  weekday?: number;
+  /** Cesta por slot: 0 = cesta única; 2 y 5 = cestas del martes y del viernes */
+  baskets: Record<number, [string, number][]>;
+};
+
+const CUSTOMERS: SeedCustomer[] = [
   {
     email: "lucia@cistella.test",
     name: "Lucía Martí",
     phone: "600111222",
     address: "Carrer Major de Santa Caterina 12, 2º",
-    frequency: "semanal" as const,
+    plan: "semanal",
     weekday: 2,
-    basket: [
-      ["Naranjas de zumo", 3],
-      ["Tomate valenciano", 1],
-      ["Lechuga romana", 2],
-      ["Merluza", 0.75],
-      ["Hamburguesas de ternera caseras", 1],
-      ["Lomo de cerdo", 0.5],
-    ] as [string, number][],
+    baskets: {
+      0: [
+        ["Naranjas de zumo", 3],
+        ["Tomate valenciano", 1],
+        ["Lechuga romana", 2],
+        ["Merluza", 0.75],
+        ["Hamburguesas de ternera caseras", 1],
+        ["Lomo de cerdo", 0.5],
+      ],
+    },
   },
   {
     email: "pau@cistella.test",
     name: "Pau Ferrando",
     phone: "600333444",
     address: "Avinguda Luis Suñer 5, 4ºB",
-    frequency: "quincenal" as const,
+    plan: "quincenal",
     weekday: 5,
-    basket: [
-      ["Kakis de la Ribera", 2],
-      ["Uva moscatel", 1],
-      ["Patata", 2],
-      ["Gambas", 0.5],
-      ["Chorizo casero", 0.25],
-    ] as [string, number][],
+    baskets: {
+      0: [
+        ["Kakis de la Ribera", 2],
+        ["Uva moscatel", 1],
+        ["Patata", 2],
+        ["Gambas", 0.5],
+        ["Chorizo casero", 0.25],
+      ],
+    },
+  },
+  {
+    email: "marta@cistella.test",
+    name: "Marta Soler",
+    phone: "600555666",
+    address: "Carrer de la Sang 3, 1º",
+    plan: "dos_por_semana",
+    baskets: {
+      2: [
+        ["Mandarinas clemenules", 2],
+        ["Pechuga de pollo fileteada", 1],
+        ["Calabacín", 1],
+      ],
+      5: [
+        ["Dorada", 1],
+        ["Alcachofas", 1],
+        ["Plátano de Canarias", 1],
+      ],
+    },
+  },
+  {
+    email: "toni@cistella.test",
+    name: "Toni Puig",
+    phone: "600777888",
+    address: "Plaça Major 8, 3º",
+    plan: "por_envio",
+    baskets: {
+      0: [
+        ["Entrecot de ternera", 0.5],
+        ["Pimiento rojo", 1],
+      ],
+    },
   },
 ];
 
@@ -108,15 +157,15 @@ async function main() {
       supabase.from("profiles").update({ full_name: c.name, phone: c.phone, address: c.address, postal_code: "46600" }).eq("id", id),
       c.email,
     );
-    const anchor = nextOpenDateForWeekday(rules, c.weekday, new Date());
-    if (!anchor) throw new Error(`No hay reparto los días ${c.weekday}; revisa delivery_schedule`);
+    const anchor = c.weekday ? nextOpenDateForWeekday(rules, c.weekday, new Date()) : nextOpenDate(rules, new Date());
+    if (!anchor) throw new Error(`No hay reparto para ${c.email}; revisa delivery_schedule`);
     await check(
       supabase.from("subscriptions").upsert(
         {
           customer_id: id,
           status: "activa",
-          frequency: c.frequency,
-          delivery_weekday: c.weekday,
+          frequency: c.plan,
+          delivery_weekday: isoWeekday(anchor.date),
           anchor_date: anchor.date,
         },
         { onConflict: "customer_id" },
@@ -126,15 +175,17 @@ async function main() {
     await check(supabase.from("basket_items").delete().eq("customer_id", id), "vaciar cesta");
     await check(
       supabase.from("basket_items").insert(
-        c.basket.map(([name, quantity]) => {
-          const pid = productId.get(name);
-          if (!pid) throw new Error(`Producto no encontrado en el seed: ${name}`);
-          return { customer_id: id, product_id: pid, quantity };
-        }),
+        Object.entries(c.baskets).flatMap(([slot, lines]) =>
+          lines.map(([name, quantity]) => {
+            const pid = productId.get(name);
+            if (!pid) throw new Error(`Producto no encontrado en el seed: ${name}`);
+            return { customer_id: id, product_id: pid, quantity, slot: Number(slot) };
+          }),
+        ),
       ),
       `cesta ${c.email}`,
     );
-    console.log(`✓ ${c.email} (${c.frequency}, primer reparto ${anchor.date})`);
+    console.log(`✓ ${c.email} (${c.plan}, primer reparto ${anchor.date})`);
   }
 
   console.log(`\nContraseña de todas las cuentas de prueba: ${PASSWORD}`);

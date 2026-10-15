@@ -572,3 +572,55 @@ describe("revisión de los cambios de las tiendas", () => {
     expect((await service.from("products").select("id").eq("id", productId)).data).toHaveLength(0);
   });
 });
+
+describe("chat entre las tiendas y el equipo", () => {
+  const clean = async () => {
+    await service.from("chat_messages").delete().in("shop_id", [SHOP.oskinez, SHOP.fruteriaA]);
+    await service.from("chat_threads").delete().in("shop_id", [SHOP.oskinez, SHOP.fruteriaA]);
+  };
+  beforeAll(clean);
+  afterAll(async () => {
+    await service.from("chat_messages").delete().in("shop_id", [SHOP.oskinez, SHOP.fruteriaA]);
+    await service.from("chat_threads").delete().in("shop_id", [SHOP.oskinez, SHOP.fruteriaA]);
+  });
+
+  it("cada tienda escribe y lee solo su conversación; no puede hablar como el equipo", async () => {
+    const { data: me } = await oskinez.auth.getUser();
+    const own = await oskinez.from("chat_messages").insert({ shop_id: SHOP.oskinez, sender_id: me.user!.id, sender_side: "tienda", body: "¿Mañana recogéis a las 9?" });
+    expect(own.error).toBeNull();
+    const asTeam = await oskinez.from("chat_messages").insert({ shop_id: SHOP.oskinez, sender_id: me.user!.id, sender_side: "admin", body: "Soy el admin" });
+    expect(asTeam.error?.code).toBe("42501");
+    const other = await oskinez.from("chat_messages").insert({ shop_id: SHOP.fruteriaA, sender_id: me.user!.id, sender_side: "tienda", body: "Hola vecina" });
+    expect(other.error?.code).toBe("42501");
+
+    expect((await fruteriaA.from("chat_messages").select("id").eq("shop_id", SHOP.oskinez)).data).toEqual([]);
+    expect((await lucia.from("chat_messages").select("id")).data).toEqual([]);
+    expect((await anon.from("chat_messages").select("id")).error).not.toBeNull();
+    // Los mensajes no se editan ni se borran
+    await oskinez.from("chat_messages").update({ body: "cambiado" }).eq("shop_id", SHOP.oskinez);
+    expect((await service.from("chat_messages").select("body").eq("shop_id", SHOP.oskinez).single()).data!.body).toBe("¿Mañana recogéis a las 9?");
+  });
+
+  it("los no leídos: el equipo ve los de las tiendas y cada tienda los del equipo", async () => {
+    expect((await admin.rpc("chat_unread_count")).data).toBeGreaterThanOrEqual(1);
+    const inbox = (await admin.rpc("chat_inbox")).data as { shop_id: string; unread: number; last_body: string }[];
+    expect(inbox.find((r) => r.shop_id === SHOP.oskinez)).toMatchObject({ unread: 1, last_body: "¿Mañana recogéis a las 9?" });
+    expect((await oskinez.rpc("chat_inbox")).error).not.toBeNull();
+
+    const { data: adminUser } = await admin.auth.getUser();
+    const reply = await admin.from("chat_messages").insert({ shop_id: SHOP.oskinez, sender_id: adminUser.user!.id, sender_side: "admin", body: "Sí, a las 9." });
+    expect(reply.error).toBeNull();
+    expect((await oskinez.rpc("chat_unread_count")).data).toBe(1);
+    expect((await fruteriaA.rpc("chat_unread_count")).data).toBe(0);
+
+    // Al abrir la conversación se marca como leída por su lado
+    expect((await oskinez.rpc("mark_chat_read", { p_shop_id: SHOP.oskinez })).error).toBeNull();
+    expect((await oskinez.rpc("chat_unread_count")).data).toBe(0);
+    expect((await fruteriaA.rpc("mark_chat_read", { p_shop_id: SHOP.oskinez })).error).not.toBeNull();
+    await admin.rpc("mark_chat_read", { p_shop_id: SHOP.oskinez });
+    const after = (await admin.rpc("chat_inbox")).data as { shop_id: string; unread: number }[];
+    expect(after.find((r) => r.shop_id === SHOP.oskinez)!.unread).toBe(0);
+    // Lo leído no se toca a mano
+    expect((await oskinez.from("chat_threads").update({ admin_read_at: null }).eq("shop_id", SHOP.oskinez).select("shop_id")).data ?? []).toEqual([]);
+  });
+});

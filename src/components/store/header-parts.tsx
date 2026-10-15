@@ -43,7 +43,9 @@ export function StoreNavLinks({ pathname }: { pathname: string | null }) {
   );
 }
 
-const MENU: { href: string; label: string; icon: IconName }[] = [
+export type MenuItem = { href: string; label: string; icon: IconName };
+
+const CUSTOMER_MENU: MenuItem[] = [
   { href: "/pedidos", label: "Mis pedidos", icon: "list" },
   { href: "/cuenta", label: "Mi plan", icon: "calendar" },
   { href: "/cuenta/datos", label: "Datos personales", icon: "user" },
@@ -52,8 +54,8 @@ const MENU: { href: string; label: string; icon: IconName }[] = [
   { href: "/ayuda", label: "Preguntas frecuentes", icon: "help" },
 ];
 
-/** «Hola Jorge» con su menú: pedidos, cuenta, ayuda y cerrar sesión. */
-export function UserMenu({ firstName }: { firstName: string }) {
+/** «Hola Jorge» con su menú: pedidos, cuenta, ayuda y cerrar sesión (o las opciones que se pasen). */
+export function UserMenu({ firstName, items = CUSTOMER_MENU }: { firstName: string; items?: MenuItem[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -87,7 +89,7 @@ export function UserMenu({ firstName }: { firstName: string }) {
           role="menu"
           className="absolute right-0 top-12 z-40 w-64 overflow-hidden rounded-lg border border-border bg-surface py-2 shadow-lg"
         >
-          {MENU.map((item) => (
+          {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}

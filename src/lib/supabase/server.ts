@@ -2,10 +2,14 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { env } from "@/lib/env";
 
 /** Cliente con la sesión del usuario: todas las consultas pasan por RLS. */
 export async function createClient() {
+  // Los datos de sesión son siempre de la petición (supabase-js consulta la hora al leer
+  // la sesión, algo que no se puede prerenderizar).
+  await connection();
   const cookieStore = await cookies();
   return createServerClient(env.supabaseUrl, env.supabaseAnonKey, {
     cookies: {

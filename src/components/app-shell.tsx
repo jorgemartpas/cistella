@@ -1,13 +1,8 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
-import { Icon, type IconName } from "./icons";
+import { Suspense, type ReactNode } from "react";
 import { Logo } from "./logo";
-import { cx } from "./ui";
+import { ActiveNavList, NavList, type NavItem } from "./nav-list";
 
-export type NavItem = { href: string; label: string; icon: IconName; exact?: boolean };
+export type { NavItem };
 
 /** Estructura de las zonas con sesión: cabecera arriba y navegación inferior tipo app. */
 export function AppShell({
@@ -21,7 +16,6 @@ export function AppShell({
   badge?: string;
   children: ReactNode;
 }) {
-  const pathname = usePathname();
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b border-border bg-bg/90 backdrop-blur pt-[env(safe-area-inset-top)]">
@@ -35,28 +29,10 @@ export function AppShell({
         aria-label="Navegación principal"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur pb-[env(safe-area-inset-bottom)]"
       >
-        <ul className="mx-auto flex max-w-3xl">
-          {nav.map((item) => {
-            const active = item.exact
-              ? pathname === item.href
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <li key={item.href} className="flex-1">
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cx(
-                    "flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium",
-                    active ? "text-primary" : "text-muted hover:text-text",
-                  )}
-                >
-                  <Icon name={item.icon} className="size-6" />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {/* La pestaña activa depende de la URL: se marca al hidratar */}
+        <Suspense fallback={<NavList nav={nav} pathname={null} />}>
+          <ActiveNavList nav={nav} />
+        </Suspense>
       </nav>
     </div>
   );

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { closeDeliveryDay, ensureDeliveryDays, getScheduleRules } from "@/lib/delivery";
 import { isoWeekday, madridDate, madridLocalToUTC } from "@/lib/domain/dates";
+import { reopenBlocker } from "@/lib/domain/orders";
 import { cutoffFor } from "@/lib/domain/schedule";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { ActionState, DeliveryDay } from "@/lib/types";
@@ -107,4 +108,49 @@ export async function closeDayNow(id: string) {
   await service.from("delivery_days").update({ cutoff_at: now }).eq("id", id).eq("status", "abierto").gt("cutoff_at", now);
   await closeDeliveryDay(service, id);
   redirect(`/admin/dias/${id}`);
+}
+
+/**
+ * Vuelve a abrir un reparto ya cerrado: borra sus pedidos (si nada se ha recogido, entregado ni
+ * cobrado) y le pone una hora de cierre nueva. Las confirmaciones de los clientes se mantienen.
+ */
+export async function reopenDay(_: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole("admin");
+  const id = String(formData.get("id"));
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/.exec(String(formData.get("cutoff") ?? ""));
+  if (!match) return { error: "La hora de cierre no es válida." };
+
+  const service = createServiceClient();
+  const { data: day } = await service.from("delivery_days").select("*").eq("id", id).single<DeliveryDay>();
+  if (!day) return { error: "Ese día de reparto no existe." };
+  if (day.status !== "cerrado") return { error: "Este reparto no está cerrado." };
+  const cutoff = madridLocalToUTC(match[1], match[2]);
+  if (cutoff <= new Date()) return { error: "La nueva hora de cierre tiene que ser más tarde que ahora." };
+  if (match[1] > day.date) return { error: "El cierre tiene que ser antes del día de reparto." };
+
+  const [{ data: orders }, { data: shopOrders }] = await Promise.all([
+    service.from("orders").select("status, payment_status, stripe_payment_intent_id").eq("delivery_day_id", id),
+    service.from("shop_orders").select("status").eq("delivery_day_id", id),
+  ]);
+  const blocker = reopenBlocker(
+    (orders ?? []).map((o) => ({
+      status: o.status,
+      paymentStatus: o.payment_status,
+      paymentIntentId: o.stripe_payment_intent_id,
+    })),
+    shopOrders ?? [],
+  );
+  if (blocker) return { error: `No se puede volver a abrir: ${blocker}.` };
+
+  // Primero los pedidos (con sus partes por tienda y líneas); si falla lo siguiente, se puede repetir
+  const { error: deleteError } = await service.from("orders").delete().eq("delivery_day_id", id);
+  if (deleteError) return { error: "No se han podido borrar los pedidos. Inténtalo de nuevo." };
+  const { error } = await service
+    .from("delivery_days")
+    .update({ status: "abierto", orders_generated_at: null, generation_report: null, cutoff_at: cutoff.toISOString() })
+    .eq("id", id)
+    .eq("status", "cerrado");
+  if (error) return { error: "No se ha podido volver a abrir. Inténtalo de nuevo." };
+  refresh();
+  return { ok: "Reparto abierto de nuevo." };
 }

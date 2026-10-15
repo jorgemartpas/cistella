@@ -10,9 +10,13 @@ import { TIME_ZONE } from "@/lib/domain/dates";
 import { formatEuros } from "@/lib/domain/money";
 import { capitalize, formatCutoff, formatDateTime, formatDay, plural } from "@/lib/format";
 import { DAY_STATUS, SKIP_REASONS } from "@/lib/labels";
+import { getScheduleRules } from "@/lib/delivery";
+import { isoWeekday } from "@/lib/domain/dates";
+import { reopenBlocker } from "@/lib/domain/orders";
+import { cutoffFor } from "@/lib/domain/schedule";
 import { createClient } from "@/lib/supabase/server";
 import type { DeliveryDay } from "@/lib/types";
-import { closeDayNow, setDayCancelled, updateDay } from "../actions";
+import { closeDayNow, reopenDay, setDayCancelled, updateDay } from "../actions";
 
 export const metadata: Metadata = { title: "Día de reparto" };
 
@@ -160,10 +164,13 @@ async function ClosedDay({ day, shopName }: { day: DeliveryDay; shopName: Map<st
     .from("shop_orders")
     .select("shop_id, status")
     .eq("delivery_day_id", day.id);
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("estimated_total_cents, delivery_fee_cents")
-    .eq("delivery_day_id", day.id);
+  const [{ data: orders }, rules] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("estimated_total_cents, delivery_fee_cents, status, payment_status, stripe_payment_intent_id")
+      .eq("delivery_day_id", day.id),
+    getScheduleRules(supabase),
+  ]);
   const byShop = new Map<string, { total: number; prepared: number }>();
   for (const so of shopOrders ?? []) {
     const entry = byShop.get(so.shop_id) ?? { total: 0, prepared: 0 };
@@ -173,6 +180,20 @@ async function ClosedDay({ day, shopName }: { day: DeliveryDay; shopName: Map<st
   }
   const estimated = (orders ?? []).reduce((sum, o) => sum + o.estimated_total_cents + o.delivery_fee_cents, 0);
   const report = day.generation_report;
+  const blocker = reopenBlocker(
+    (orders ?? []).map((o) => ({
+      status: o.status,
+      paymentStatus: o.payment_status,
+      paymentIntentId: o.stripe_payment_intent_id,
+    })),
+    shopOrders ?? [],
+  );
+  // Nueva hora de cierre propuesta: la normal de ese día si aún no ha pasado; si no, dentro de una hora
+  const now = new Date();
+  const rule = rules.find((r) => r.weekday === isoWeekday(day.date));
+  const regular = rule ? cutoffFor(day.date, rule) : null;
+  const proposedCutoff =
+    regular && regular > now ? regular : new Date(Math.ceil((now.getTime() + 3_600_000) / 900_000) * 900_000);
 
   return (
     <>
@@ -218,6 +239,29 @@ async function ClosedDay({ day, shopName }: { day: DeliveryDay; shopName: Map<st
             </ul>
           </Notice>
         </>
+      )}
+
+      <SectionTitle>Volver a abrir</SectionTitle>
+      {blocker ? (
+        <p className="text-sm text-muted">No se puede volver a abrir: {blocker}.</p>
+      ) : (
+        <ActionForm action={reopenDay}>
+          <input type="hidden" name="id" value={day.id} />
+          <p className="text-sm text-muted">
+            Se borran los pedidos generados y los clientes pueden volver a cambiar su cesta y confirmar hasta la nueva
+            hora de cierre. Las confirmaciones que ya había se mantienen.
+          </p>
+          <Field label="Nueva hora de cierre (hora de Alzira)">
+            <Input type="datetime-local" name="cutoff" defaultValue={toLocalInput(proposedCutoff.toISOString())} required />
+          </Field>
+          <ConfirmButton
+            className="w-full"
+            message={`Se borrarán ${plural(orders?.length ?? 0, "pedido generado", "pedidos generados")} de este día y se volverá a abrir. ¿Seguir?`}
+            pendingText="Abriendo…"
+          >
+            Volver a abrir este reparto
+          </ConfirmButton>
+        </ActionForm>
       )}
     </>
   );

@@ -233,6 +233,27 @@ export function planOrdersForDay(input: PlanInput): OrderPlan {
   return plan;
 }
 
+/**
+ * ¿Se puede volver a abrir un reparto ya cerrado? Reabrir borra sus pedidos, así que solo se
+ * puede mientras nada se haya recogido en las tiendas, entregado o cobrado (preparar sí).
+ * Devuelve el motivo si no se puede, o null.
+ */
+export function reopenBlocker(
+  orders: { status: string; paymentStatus: string; paymentIntentId: string | null }[],
+  shopOrders: { status: string }[],
+): string | null {
+  if (orders.some((o) => o.paymentIntentId || ["procesando", "pagado", "fallido"].includes(o.paymentStatus))) {
+    return "ya se ha cobrado (o intentado cobrar) algún pedido";
+  }
+  if (orders.some((o) => ["entregado", "no_entregado"].includes(o.status))) {
+    return "ya se ha entregado algún pedido";
+  }
+  if (orders.some((o) => o.status === "en_reparto") || shopOrders.some((so) => so.status === "recogido")) {
+    return "el reparto ya ha recogido en alguna tienda";
+  }
+  return null;
+}
+
 /** Importe final con las cantidades reales que ha indicado cada tienda. */
 export function finalTotalCents(
   items: { quantityOrdered: number; quantityActual: number | null; unitPriceCents: number }[],

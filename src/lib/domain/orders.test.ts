@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { finalTotalCents, planOrdersForDay, type PlanCustomer, type PlanInput, type PlanProduct } from "./orders";
+import {
+  finalTotalCents,
+  planOrdersForDay,
+  reopenBlocker,
+  type PlanCustomer,
+  type PlanInput,
+  type PlanProduct,
+} from "./orders";
 
 const SHOPS = {
   oskinez: "shop-carn-oskinez",
@@ -372,5 +379,29 @@ describe("importe final con el peso real", () => {
 
   it("una cantidad real de cero no se cobra", () => {
     expect(finalTotalCents([{ quantityOrdered: 1, quantityActual: 0, unitPriceCents: 1490 }])).toBe(0);
+  });
+});
+
+describe("volver a abrir un reparto cerrado", () => {
+  const order = (status: string, paymentStatus = "pendiente", paymentIntentId: string | null = null) => ({
+    status,
+    paymentStatus,
+    paymentIntentId,
+  });
+
+  it("se puede mientras los pedidos estén pendientes o preparados", () => {
+    expect(reopenBlocker([], [])).toBeNull();
+    expect(
+      reopenBlocker([order("pendiente"), order("preparado")], [{ status: "pendiente" }, { status: "preparado" }]),
+    ).toBeNull();
+  });
+
+  it("no se puede si ya se ha recogido, entregado o cobrado algo", () => {
+    expect(reopenBlocker([order("preparado")], [{ status: "recogido" }])).toMatch(/recogido/);
+    expect(reopenBlocker([order("en_reparto")], [])).toMatch(/recogido/);
+    expect(reopenBlocker([order("entregado")], [])).toMatch(/entregado/);
+    expect(reopenBlocker([order("no_entregado", "sin_cobro")], [])).toMatch(/entregado/);
+    expect(reopenBlocker([order("entregado", "pagado", "pi_123")], [])).toMatch(/cobrado/);
+    expect(reopenBlocker([order("pendiente", "procesando")], [])).toMatch(/cobrado/);
   });
 });

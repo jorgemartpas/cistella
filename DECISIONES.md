@@ -33,6 +33,7 @@ Todo lo marcado como **provisional** se cambia desde el panel de admin, sin toca
 - **Disponibilidad:** si la tienda de turno no tiene un producto del catálogo unificado, ese producto no se sirve ese día y el cliente lo ve en su pedido («No incluido esta vez»). No se busca en la otra tienda.
 - **Rotación:** alterna entre las tiendas activas de cada tipo según su «orden de rotación». El admin puede cambiar la tienda de turno de un día concreto.
 - **Festivos:** el admin puede cancelar un día de reparto; nadie recibe pedido ese día.
+- **Reabrir un reparto cerrado** (**provisional**): el admin puede reabrirlo con una hora de cierre nueva mientras nada se haya recogido en las tiendas, entregado o cobrado. Se borran sus pedidos (también lo que las tiendas hubieran marcado como preparado) y se vuelven a generar al cerrar; las confirmaciones de los clientes se mantienen.
 - **Precios:** cada pedido guarda el precio del momento del cierre; cambiar un precio no altera pedidos ya generados.
 - **Cantidades:** lo que va al kilo se pide en cuartos de kilo; unidades y bandejas, enteras. La tienda puede indicar cualquier cantidad real.
 - **Comisión:** cuenta como vendido lo que el reparto ha recogido en la tienda, con la cantidad real, aunque luego el cliente no estuviera en casa.

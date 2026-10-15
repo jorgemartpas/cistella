@@ -227,6 +227,35 @@ describe("cliente", () => {
     expect(orphan).toEqual([]);
   });
 
+  it("salta repartos abiertos, solo suyos; una sola cesta automática; el admin las ve", async () => {
+    const skip = await lucia.from("delivery_skips").insert({ customer_id: luciaId, delivery_day_id: openDayId });
+    expect(skip.error).toBeNull();
+    const forOther = await pau.from("delivery_skips").insert({ customer_id: luciaId, delivery_day_id: openDayId });
+    expect(forOther.error?.code).toBe("42501");
+    const closed = await lucia.from("delivery_skips").insert({ customer_id: luciaId, delivery_day_id: dayId });
+    expect(closed.error?.code).toBe("42501");
+    const { data: seenByPau } = await pau.from("delivery_skips").select("customer_id").eq("delivery_day_id", openDayId);
+    expect(seenByPau).toEqual([]);
+    const { data: seenByAdmin } = await admin.from("delivery_skips").select("customer_id").eq("delivery_day_id", openDayId);
+    expect(seenByAdmin).toHaveLength(1);
+    const undo = await lucia.from("delivery_skips").delete().eq("delivery_day_id", openDayId).select("customer_id");
+    expect(undo.data).toHaveLength(1);
+
+    await lucia.from("saved_lists").update({ auto_delivery: false }).eq("customer_id", luciaId);
+    const { data: auto } = await lucia
+      .from("saved_lists")
+      .insert({ kind: "cesta", name: "Automática", auto_delivery: true })
+      .select("id")
+      .single();
+    const second = await lucia.from("saved_lists").insert({ kind: "cesta", name: "Otra", auto_delivery: true });
+    expect(second.error?.code).toBe("23505");
+    const { data: adminSees } = await admin.from("saved_lists").select("id").eq("id", auto!.id);
+    expect(adminSees).toHaveLength(1);
+    const { data: pauSees } = await pau.from("saved_lists").select("id").eq("id", auto!.id);
+    expect(pauSees).toEqual([]);
+    await lucia.from("saved_lists").delete().eq("id", auto!.id);
+  });
+
   it("no puede marcar su pedido como entregado", async () => {
     await lucia.from("orders").update({ status: "entregado" }).eq("id", luciaOrderId);
     const { data } = await service.from("orders").select("status").eq("id", luciaOrderId).single();

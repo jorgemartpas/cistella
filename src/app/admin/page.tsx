@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Icon, type IconName } from "@/components/icons";
-import { Badge, ButtonLink, Card, PageHeader, PageSkeleton, SectionTitle } from "@/components/ui";
+import { Badge, ButtonLink, Card, Notice, PageHeader, PageSkeleton, SectionTitle } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { closeDueDeliveryDays, dayDemand, ensureDeliveryDays } from "@/lib/delivery";
 import { madridDate } from "@/lib/domain/dates";
@@ -11,6 +11,7 @@ import { capitalize, formatCutoff, formatDay, plural } from "@/lib/format";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { DeliveryFrequency } from "@/lib/domain/subscription";
 import { monthlyPriceCents } from "@/lib/plans";
+import { loadChanges, pendingChangesCount } from "@/lib/product-changes";
 import type { DeliveryDay, Settings } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -57,12 +58,15 @@ async function Dashboard() {
 
   const supabase = await createClient();
   const today = madridDate(new Date());
-  const [{ data: subs }, { data: days }, { data: failed }, { data: settings }] = await Promise.all([
-    supabase.from("subscriptions").select("status, frequency"),
-    supabase.from("delivery_days").select("*").gte("date", today).neq("status", "cancelado").order("date").limit(4),
-    supabase.from("orders").select("id").eq("payment_status", "fallido"),
-    supabase.from("settings").select("*").single<Settings>(),
-  ]);
+  const [{ data: subs }, { data: days }, { data: failed }, { data: settings }, pendingCount, pendingChanges] =
+    await Promise.all([
+      supabase.from("subscriptions").select("status, frequency"),
+      supabase.from("delivery_days").select("*").gte("date", today).neq("status", "cancelado").order("date").limit(4),
+      supabase.from("orders").select("id").eq("payment_status", "fallido"),
+      supabase.from("settings").select("*").single<Settings>(),
+      pendingChangesCount(supabase),
+      loadChanges(supabase, { pending: true, limit: 3 }),
+    ]);
   const count = (status: string) => (subs ?? []).filter((s) => s.status === status).length;
   const activeSubs = (subs ?? []).filter((s) => s.status === "activa");
   const active = activeSubs.length;
@@ -87,6 +91,23 @@ async function Dashboard() {
 
   return (
     <>
+      {pendingCount > 0 && (
+        <div className="mb-3">
+          <Notice
+            tone="warning"
+            title={pendingCount === 1 ? "1 cambio pendiente de revisión" : `${pendingCount} cambios pendientes de revisión`}
+          >
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {pendingChanges.map((c) => (
+                <li key={c.id}>{c.title}</li>
+              ))}
+            </ul>
+            <Link href="/admin/revisiones" className="mt-2 inline-block font-semibold underline underline-offset-2">
+              Revisar
+            </Link>
+          </Notice>
+        </div>
+      )}
       {nextClosed && progress && (
         <Card className="mb-3 border-transparent bg-primary-soft">
           <p className="text-sm text-primary">{nextClosed.date === today ? "Reparto de hoy" : "Próximo reparto"}</p>

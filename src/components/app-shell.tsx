@@ -19,11 +19,14 @@ export function AppShell({
   nav,
   more = [],
   badge,
+  actions,
   children,
 }: {
   nav: NavItem[];
   more?: NavItem[];
   badge?: string;
+  /** Botones de la cabecera junto a «Hola …» (la campana de revisiones del admin) */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   const all = [...nav, ...more];
@@ -38,6 +41,7 @@ export function AppShell({
             </span>
           )}
           <div className="ml-auto flex items-center gap-1">
+            {actions}
             <Suspense fallback={null}>
               <Greeting items={all} />
             </Suspense>

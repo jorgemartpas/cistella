@@ -70,7 +70,14 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
     next = await nextDeliveryFor(supabase, sub, now, dayBaskets ? slot : undefined);
   }
   const closing = isActive ? await closingDayFor(supabase, sub, now) : null;
-  const upcomingDay = next?.day ?? requestable.find((r) => r.requested)?.day ?? null;
+  const requestedDay = requestable.find((r) => r.requested)?.day ?? null;
+  const upcomingDay = next?.day ?? requestedDay;
+  // No hay que confirmar nada: la cesta se guarda sola y al cierre se convierte en pedido
+  const orderAt: OrderAt | null = requestedDay
+    ? { date: requestedDay.date, cutoffAt: requestedDay.cutoff_at }
+    : next
+      ? { date: next.date, cutoffAt: next.cutoffAt }
+      : null;
   const { data: unavailableIds } = upcomingDay
     ? await supabase.rpc("unavailable_on_day", { p_day_id: upcomingDay.id })
     : { data: [] };
@@ -157,6 +164,8 @@ async function Basket({ searchParams }: Pick<PageProps<"/cesta">, "searchParams"
           unavailable={unavailable}
           minOrderCents={settings?.min_order_cents ?? 0}
           deliveryFeeCents={perDelivery ? (settings?.delivery_fee_cents ?? 0) : 0}
+          orderAt={isActive ? orderAt : null}
+          askForDelivery={isActive && perDelivery && !requestedDay}
         />
       ) : (
         <CategoryView
@@ -308,6 +317,9 @@ function ProductRow({
   );
 }
 
+/** Reparto en el que la cesta se convertirá en pedido, y cuándo */
+type OrderAt = { date: string; cutoffAt: Date | string };
+
 function BasketView({
   products,
   basket,
@@ -316,6 +328,8 @@ function BasketView({
   unavailable,
   minOrderCents,
   deliveryFeeCents,
+  orderAt,
+  askForDelivery,
 }: {
   products: Product[];
   basket: Map<string, number>;
@@ -324,6 +338,8 @@ function BasketView({
   unavailable: Set<string>;
   minOrderCents: number;
   deliveryFeeCents: number;
+  orderAt: OrderAt | null;
+  askForDelivery: boolean;
 }) {
   const inBasket = products.filter((p) => basket.has(p.id));
   const retired = basket.size - inBasket.length;
@@ -383,6 +399,20 @@ function BasketView({
           </p>
         )}
       </Card>
+      {(orderAt || askForDelivery) && (
+        <div className="mt-3">
+          <Notice tone="success" title="Tu cesta se guarda sola: no hace falta confirmar">
+            {orderAt ? (
+              <>
+                Al cierre ({formatCutoff(orderAt.cutoffAt)}) se convierte en tu pedido del {formatDay(orderAt.date)}.
+                Hasta entonces puedes cambiarla cuando quieras.
+              </>
+            ) : (
+              "Para recibirla, pide arriba el reparto que quieras."
+            )}
+          </Notice>
+        </div>
+      )}
     </>
   );
 }

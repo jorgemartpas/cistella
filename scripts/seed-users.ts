@@ -1,4 +1,5 @@
-// Crea usuarios de prueba: admin, una cuenta por tienda del piloto y dos clientes con cesta.
+// Crea usuarios de prueba: admin, una cuenta por tienda del piloto y un cliente de cada plan con cesta
+// y su primer reparto ya confirmado (si ese día de reparto ya existe).
 // Uso: npm run seed:users   (lee .env.local; para un proyecto remoto añade --yes)
 import { createClient } from "@supabase/supabase-js";
 import { isoWeekday } from "../src/lib/domain/dates";
@@ -185,7 +186,16 @@ async function main() {
       ),
       `cesta ${c.email}`,
     );
-    console.log(`✓ ${c.email} (${c.plan}, primer reparto ${anchor.date})`);
+    const { data: day } = await supabase.from("delivery_days").select("id").eq("date", anchor.date).maybeSingle();
+    if (day) {
+      await check(
+        supabase
+          .from("delivery_requests")
+          .upsert({ customer_id: id, delivery_day_id: day.id }, { onConflict: "customer_id,delivery_day_id" }),
+        `confirmación ${c.email}`,
+      );
+    }
+    console.log(`✓ ${c.email} (${c.plan}, primer reparto ${anchor.date}${day ? ", confirmado" : ""})`);
   }
 
   console.log(`\nContraseña de todas las cuentas de prueba: ${PASSWORD}`);

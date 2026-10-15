@@ -51,6 +51,11 @@ test("ciclo completo: alta, cesta, cierre, preparación, reparto y entrega", asy
   const deliveryDay = (await main(page).locator("p.text-xl").first().textContent())!.trim();
   expect(deliveryDay).toMatch(/^martes/i);
 
+  // Sin confirmar no se prepara: confirma el pedido de ese reparto
+  await expect(main(page).getByText("Sin confirmar.")).toBeVisible();
+  await main(page).getByRole("button", { name: /^Confirmar pedido del martes/ }).click();
+  await expect(main(page).getByText(/Pedido confirmado para el martes/)).toBeVisible();
+
   // 3. El admin cierra ese reparto y se generan los pedidos por tienda
   const admin = await login(browser, "admin@cistella.test");
   admin.on("dialog", (dialog) => dialog.accept());

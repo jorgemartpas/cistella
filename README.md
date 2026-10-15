@@ -4,7 +4,7 @@ Web app de suscripción que lleva a casa la compra de las carnicerías, pescader
 Piloto v1 con 6 tiendas. Especificación en [SPEC.md](./SPEC.md); decisiones tomadas y pendientes en
 [DECISIONES.md](./DECISIONES.md).
 
-- **Cliente:** elige plan (2 veces por semana 25 €/mes, cada semana 20 €/mes, cada 2 semanas 16 €/mes o pago por envío, 6 € por reparto), monta una cesta que se repite sola y ve sus pedidos.
+- **Cliente:** elige plan (2 veces por semana 25 €/mes, cada semana 20 €/mes, cada 2 semanas 16 €/mes o pago por envío, 6 € por reparto), monta su cesta, confirma cada pedido antes del cierre y ve sus pedidos.
 - **Tienda:** las carnicerías gestionan sus productos; fruterías y pescaderías marcan qué tienen. Todas preparan sus pedidos, indican el peso real y ven sus ventas y comisión.
 - **Admin:** tiendas, catálogo unificado, días de reparto y rotación, reparto del día (recogidas y entregas), clientes, ventas y ajustes.
 
@@ -76,9 +76,9 @@ npm run lint
 ## Cómo funciona
 
 ```
-Cliente ajusta su cesta ──► Cierre a la hora límite ──► Se divide por tienda
-                                                         ├─ Carne → su carnicería
-                                                         └─ Fruta, verdura y pescado → tienda de turno (si lo tiene)
+Cliente ajusta su cesta y confirma ──► Cierre a la hora límite ──► Se divide por tienda
+                                                                   ├─ Carne → su carnicería
+                                                                   └─ Fruta, verdura y pescado → tienda de turno (si lo tiene)
 Cada tienda prepara (peso real) ──► El reparto recoge ──► Entrega ──► Cobro con el peso real
 ```
 

@@ -55,4 +55,9 @@ export function nextOpenDateForWeekday(
   return upcomingDeliveryDates([rule], today, 15, now)[0] ?? null;
 }
 
+/** Primer reparto que aún admite cambios, sea cual sea el día de la semana. */
+export function nextOpenDate(rules: ScheduleRule[], now: Date): PlannedDeliveryDate | null {
+  return upcomingDeliveryDates(rules, madridDate(now), 15, now)[0] ?? null;
+}
+
 export const WEEKDAY_NAMES = ["", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cutoffFor, nextOpenDateForWeekday, upcomingDeliveryDates, type ScheduleRule } from "./schedule";
+import { cutoffFor, nextOpenDate, nextOpenDateForWeekday, upcomingDeliveryDates, type ScheduleRule } from "./schedule";
 
 // Calendario por defecto: martes y viernes, cierre a las 20:00 del día anterior
 const rules: ScheduleRule[] = [
@@ -37,5 +37,10 @@ describe("calendario de reparto", () => {
     expect(nextOpenDateForWeekday(rules, 5, thursdayNight)?.date).toBe("2026-10-23");
     expect(nextOpenDateForWeekday(rules, 2, thursdayNight)?.date).toBe("2026-10-20");
     expect(nextOpenDateForWeekday(rules, 3, thursdayNight)).toBeNull();
+  });
+
+  it("encuentra el siguiente reparto abierto de cualquier día", () => {
+    expect(nextOpenDate(rules, new Date("2026-10-15T10:00:00Z"))?.date).toBe("2026-10-16");
+    expect(nextOpenDate(rules, new Date("2026-10-15T19:00:00Z"))?.date).toBe("2026-10-20");
   });
 });

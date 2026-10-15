@@ -31,7 +31,7 @@ export const STATUS_LABELS: Record<SubscriptionStatus, string> = {
 const EVERY_WEEKS: Partial<Record<DeliveryFrequency, number>> = { semanal: 1, quincenal: 2 };
 
 /** ¿Tiene cuota mensual (suscripción en Stripe)? */
-export function hasMonthlyFee(plan: DeliveryFrequency): boolean {
+export function hasMonthlyFee(plan: DeliveryFrequency): plan is Exclude<DeliveryFrequency, "por_envio"> {
   return plan !== "por_envio";
 }
 
